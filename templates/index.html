@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crop Doctor</title>
+</head>
+<body>
+  <h1>🌱 Crop Doctor</h1>
+  <p>Upload a photo of the crop leaf</p>
+
+  <form action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="leaf" accept="image/*" required>
+    <button type="submit">Check Leaf</button>
+  </form>
+
+  {% if image %}
+    <h3>Your photo:</h3>
+    <img src="{{ url_for('static', filename='uploads/' + image) }}" width="250">
+  {% endif %}
+</body>
+</html>
