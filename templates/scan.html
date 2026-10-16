@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Scan - Crop Doctor{% endblock %}
+
+{% block content %}
+<style>
+  .page-hero {
+    position: relative; overflow: hidden; color: white;
+    background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 55%, #43a047 100%);
+  }
+  .page-hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -90px; top: -130px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); }
+  .page-hero-inner { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 26px 20px 52px; }
+  .page-hero h1 { margin: 0 0 6px; font-size: 28px; display: flex; align-items: center; gap: 12px; }
+  .page-hero p { margin: 0 0 16px; color: #e8f5e9; }
+  .mini-steps { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ms {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px;
+    border-radius: 30px; font-size: 13px; font-weight: 600;
+    background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+  .ms b { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: white; color: #2e7d32; font-size: 12px; }
+
+  .wrap.scanpage { max-width: 1100px; margin: -28px auto 40px; padding: 0 14px; position: relative; z-index: 2; }
+  .wrap.scanpage .card { margin-bottom: 18px; }
+
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 34px 14px; text-align: center; cursor: pointer;
+    border: 2.5px dashed #66bb6a; border-radius: 22px;
+    background: linear-gradient(180deg, #f6fbf6, #eef8ee); color: #2e7d32; transition: 0.25s;
+  }
+  .dropzone b { font-size: 17px; word-break: break-all; }
+  .dropzone small { color: #667; font-size: 13px; }
+  .dz-icon {
+    width: 72px; height: 72px; display: grid; place-items: center; border-radius: 50%;
+    font-size: 30px; color: white; background: linear-gradient(135deg, #2e7d32, #66bb6a);
+    box-shadow: 0 10px 22px rgba(46, 125, 50, 0.3); transition: 0.3s;
+  }
+  .dropzone:hover { background: #e8f5e9; border-color: #2e7d32; transform: translateY(-3px); }
+  .dropzone:hover .dz-icon { transform: scale(1.1) translateY(-4px); }
+  .dropzone.over { background: #c8e6c9; border-color: #1b5e20; transform: scale(1.02); }
+  .dropzone.filled { padding: 18px 14px; }
+  .dropzone.filled .dz-icon { width: 48px; height: 48px; font-size: 20px; }
+
+  .guide h2 { margin-top: 0; }
+  .ok-row i { color: #2e7d32; }
+  .sup-title { margin: 20px 0 10px; font-size: 15px; color: #556; }
+  .guide .chip { cursor: default; }
+
+  @media (min-width: 900px) {
+    .page-hero-inner { padding: 44px 48px 70px; }
+    .page-hero h1 { font-size: 38px; }
+    .wrap.scanpage { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start; margin-top: -40px; padding: 0 32px; }
+    .wrap.scanpage .card { margin-bottom: 0; }
+    .dropzone { padding: 52px 20px; }
+    .dropzone.filled { padding: 22px 20px; }
+  }
+</style>
+
+<section class="page-hero">
+  <div class="page-hero-inner">
+    <h1><i class="fa-solid fa-camera"></i> <span data-i18n="scan">Scan a leaf</span></h1>
+    <p data-i18n="scan_sub">Add a clear photo of one leaf to check its health.</p>
+    <div class="mini-steps">
+      <span class="ms"><b>1</b> <span data-i18n="step1_t">Scan</span></span>
+      <span class="ms"><b>2</b> <span data-i18n="step2_t">Detect</span></span>
+      <span class="ms"><b>3</b> <span data-i18n="step3_t">Act</span></span>
+    </div>
+  </div>
+</section>
+
+<main class="wrap scanpage">
+  <section class="card upcard">
+    <form id="scanForm" action="/upload" method="POST" enctype="multipart/form-data">
+      <label class="dropzone" for="leaf" id="drop">
+        <span class="dz-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
+        <b id="boxText" data-i18n="tap">Tap to take or choose a photo</b>
+        <small data-i18n="drop_hint">Drag and drop a photo here, or tap to choose</small>
+      </label>
+      <input type="file" id="leaf" name="leaf" accept="image/*" required>
+      <img id="preview" class="preview" style="display:none">
+
+      <button type="button" id="camBtn" class="cam"><i class="fa-solid fa-video"></i> <span data-i18n="use_camera">Use camera</span></button>
+      <div id="camBox" style="display:none">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="voice">
+          <button type="button" id="snapBtn"><i class="fa-solid fa-camera"></i> <span data-i18n="capture">Capture</span></button>
+          <button type="button" id="closeCam" class="stop"><i class="fa-solid fa-xmark"></i> <span data-i18n="close">Close</span></button>
+        </div>
+      </div>
+
+      <button type="submit" id="goBtn"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="check">Check Leaf</span></button>
+    </form>
+  </section>
+
+  <aside class="card guide">
+    <h2><i class="fa-solid fa-lightbulb"></i> <span data-i18n="guide_title">Photo guide</span></h2>
+    <div class="tip-row ok-row"><i class="fa-solid fa-circle-check"></i><span data-i18n="tip1">Use daylight, not shadow.</span></div>
+    <div class="tip-row ok-row"><i class="fa-solid fa-circle-check"></i><span data-i18n="tip2">Photograph one leaf, close up.</span></div>
+    <div class="tip-row ok-row"><i class="fa-solid fa-circle-check"></i><span data-i18n="tip3">Keep a plain background, like paper.</span></div>
+    <div class="tip-row ok-row"><i class="fa-solid fa-circle-check"></i><span data-i18n="tip4">Keep the spots in focus.</span></div>
+
+    <h3 class="sup-title" data-i18n="supported">Works with these crops</h3>
+    <div class="chips wrapchips">
+      {% for c in chips %}
+        <span class="chip">
+          {% if c.img %}<img src="{{ c.img }}" alt="">{% else %}<i class="fa-solid fa-seedling"></i>{% endif %}
+          {{ c.t }}
+        </span>
+      {% endfor %}
+    </div>
+  </aside>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const leaf = document.getElementById("leaf");
+  const drop = document.getElementById("drop");
+
+  function showFile() {
+    const f = leaf.files[0];
+    if (!f) return;
+    const box = document.getElementById("boxText");
+    box.removeAttribute("data-i18n");
+    box.textContent = f.name;
+    const p = document.getElementById("preview");
+    p.src = URL.createObjectURL(f);
+    p.style.display = "block";
+    drop.classList.add("filled");
+  }
+  leaf.addEventListener("change", showFile);
+
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault();
+    drop.classList.add("over");
+  }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault();
+    drop.classList.remove("over");
+  }));
+  drop.addEventListener("drop", e => {
+    if (e.dataTransfer.files.length) {
+      leaf.files = e.dataTransfer.files;
+      showFile();
+    }
+  });
+
+  const camBtn = document.getElementById("camBtn");
+  const camBox = document.getElementById("camBox");
+  const video = document.getElementById("video");
+  let stream = null;
+
+  function stopCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.srcObject = null;
+    camBox.style.display = "none";
+  }
+
+  camBtn.addEventListener("click", async () => {
+    if (stream) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("This page can't use the camera. Open it as http://127.0.0.1:5000 in Chrome.");
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      await video.play();
+      camBox.style.display = "block";
+    } catch (e) {
+      alert("Camera error: " + e.name + " - " + e.message);
+    }
+  });
+
+  document.getElementById("closeCam").addEventListener("click", stopCamera);
+
+  document.getElementById("snapBtn").addEventListener("click", () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      const file = new File([blob], "scan_" + Date.now() + ".jpg", { type: "image/jpeg" });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      leaf.files = dt.files;
+      showFile();
+      stopCamera();
+    }, "image/jpeg", 0.9);
+  });
+
+  document.getElementById("scanForm").addEventListener("submit", () => {
+    const b = document.getElementById("goBtn");
+    b.textContent = T.analysing;
+    b.disabled = true;
+  });
+</script>
+{% endblock %}

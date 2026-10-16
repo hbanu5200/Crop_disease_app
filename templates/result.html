@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Result - Crop Doctor{% endblock %}
+
+{% block content %}
+<style>
+  .res-hero { position: relative; overflow: hidden; color: white; }
+  .res-hero.bad { background: linear-gradient(135deg, #b71c1c 0%, #e53935 55%, #ff7043 100%); }
+  .res-hero.ok { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 55%, #43a047 100%); }
+  .res-hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -100px; top: -140px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); }
+  .res-hero-inner { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 26px 20px 58px; }
+  .res-chip, .res-badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px;
+    border-radius: 30px; font-size: 14px; font-weight: 600;
+    background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  .res-hero h1 { margin: 14px 0 12px; font-size: 32px; line-height: 1.15; animation: dropIn 0.7s both; }
+  @keyframes dropIn { from { opacity: 0; transform: translateY(-26px); } to { opacity: 1; transform: none; } }
+
+  .wrap.result2 { max-width: 1100px; margin: -30px auto 40px; padding: 0 14px; position: relative; z-index: 2; display: grid; gap: 18px; }
+  .wrap.result2 .card { margin-bottom: 0; }
+
+  .photo { position: relative; overflow: hidden; border-radius: 16px; }
+  .photo img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+  .photo::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; opacity: 0;
+    background: linear-gradient(90deg, transparent, #76ff03, transparent);
+    box-shadow: 0 0 16px #76ff03; animation: scanmove 1.5s ease-in-out 2;
+  }
+  @keyframes scanmove { 0% { top: 0; opacity: 1; } 95% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+  .gauge-row { display: flex; align-items: center; gap: 18px; margin-top: 18px; }
+  .gauge { position: relative; width: 130px; height: 130px; flex: 0 0 130px; }
+  .gauge svg { width: 100%; height: 100%; }
+  .g-bg { fill: none; stroke: #e8f0e8; stroke-width: 10; }
+  .g-fg {
+    fill: none; stroke: #2e7d32; stroke-width: 10; stroke-linecap: round;
+    stroke-dasharray: 326.73; stroke-dashoffset: 326.73;
+    transform: rotate(-90deg); transform-origin: 60px 60px; transition: stroke-dashoffset 1.4s ease;
+  }
+  .g-fg.low { stroke: #ff9800; }
+  .g-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .g-text b { font-size: 28px; color: #1b5e20; }
+  .g-text span { font-size: 14px; font-weight: 700; color: #1b5e20; }
+  .g-text small { margin-top: 3px; font-size: 11px; color: #667; }
+  .gauge-side { flex: 1; min-width: 0; }
+
+  .opt { margin: 10px 0; }
+  .opt-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: #445; }
+  .opt-bar { height: 8px; margin-top: 4px; background: #e8f0e8; border-radius: 8px; overflow: hidden; }
+  .opt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #90a4ae, #607d8b); border-radius: 8px; transition: width 1.2s ease; }
+
+  .stag { opacity: 0; animation: slideIn 0.6s forwards; animation-delay: var(--d, 0s); }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
+
+  .act { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .act button, .act a {
+    margin: 0; width: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px; font-size: 15px; font-weight: 600; font-family: inherit;
+    border-radius: 14px; text-decoration: none; cursor: pointer; border: none; transition: 0.25s;
+  }
+  .act .b-print { background: white; color: #2e7d32; border: 2px solid #c8e6c9; box-shadow: none; }
+  .act .b-print:hover { background: #e8f5e9; }
+  .act a.b-scan { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; }
+  .act a.b-scan:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(21, 101, 192, 0.4); }
+
+  @media (min-width: 900px) {
+    .res-hero-inner { padding: 44px 48px 78px; }
+    .res-hero h1 { font-size: 44px; }
+    .wrap.result2 { grid-template-columns: 1fr 1.15fr; align-items: start; padding: 0 32px; margin-top: -46px; }
+  }
+  @media print {
+    .appbar, .tabbar, .footer, .act, audio { display: none !important; }
+    .wrap.result2 { margin-top: 0; }
+  }
+</style>
+
+<section class="res-hero {{ 'ok' if healthy else 'bad' }}">
+  <div class="res-hero-inner">
+    <span class="res-chip"><i class="fa-solid fa-seedling"></i> {{ crop or '-' }}</span>
+    <h1>{{ disease }}</h1>
+    <span class="res-badge">
+      <i class="fa-solid {{ 'fa-circle-check' if healthy else 'fa-triangle-exclamation' }}"></i>
+      <span data-i18n="{{ 'healthy' if healthy else 'disease' }}">{{ 'Healthy' if healthy else 'Disease detected' }}</span>
+    </span>
+  </div>
+</section>
+
+<main class="wrap result2">
+  <section class="card">
+    <div class="photo"><img src="{{ url_for('static', filename='uploads/' + image) }}" alt=""></div>
+
+    <div class="gauge-row">
+      <div class="gauge">
+        <svg viewBox="0 0 120 120">
+          <circle class="g-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="g-fg {{ 'low' if low else '' }}" id="gfg" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="g-text">
+          <div><b id="gnum" data-to="{{ confidence }}">0</b><span>%</span></div>
+          <small data-i18n="confidence">Confidence</small>
+        </div>
+      </div>
+
+      <div class="gauge-side">
+        {% if others %}
+        <b data-i18n="others">Other possibilities</b>
+        {% for name, c in others %}
+        <div class="opt">
+          <div class="opt-top"><span>{{ name }}</span><span>{{ c }}%</span></div>
+          <div class="opt-bar"><i data-w="{{ c }}"></i></div>
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    {% if low %}
+    <div class="warn"><i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="unsure">Not very sure. Retake a clear, close photo of one leaf in good light.</span></div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2><i class="fa-solid fa-lightbulb"></i> <span data-i18n="advice">Advice</span></h2>
+    <div class="tips">
+      <div class="tip t1 stag" style="--d:.2s"><h4><i class="fa-solid fa-circle-info"></i> {{ labels[0] }}</h4><p>{{ info.about }}</p></div>
+      <div class="tip t2 stag" style="--d:.4s"><h4><i class="fa-solid fa-leaf"></i> {{ labels[1] }}</h4><p>{{ info.organic }}</p></div>
+      <div class="tip t3 stag" style="--d:.6s"><h4><i class="fa-solid fa-flask"></i> {{ labels[2] }}</h4><p>{{ info.chemical }}</p></div>
+      <div class="tip t4 stag" style="--d:.8s"><h4><i class="fa-solid fa-shield-halved"></i> {{ labels[3] }}</h4><p>{{ info.prevention }}</p></div>
+    </div>
+
+    <div class="act">
+      <button type="button" onclick="speak()"><i class="fa-solid fa-volume-high"></i> <span data-i18n="listen">Listen</span></button>
+      <button type="button" class="stop" onclick="stopSpeak()"><i class="fa-solid fa-stop"></i> <span data-i18n="stop">Stop</span></button>
+      <button type="button" class="b-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+      <a class="b-scan" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="scan_again">Scan another leaf</span></a>
+    </div>
+    <audio id="player" controls></audio>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function stopSpeak() {
+    const p = document.getElementById("player");
+    p.pause();
+    p.currentTime = 0;
+  }
+  async function speak() {
+    const r = await fetch("/speak", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text: {{ speech|tojson }}, lang: LANG})
+    });
+    const blob = await r.blob();
+    const player = document.getElementById("player");
+    player.src = URL.createObjectURL(blob);
+    player.play();
+  }
+
+  const circ = 326.73;
+  const fg = document.getElementById("gfg");
+  const num = document.getElementById("gnum");
+  const to = parseFloat(num.dataset.to) || 0;
+
+  setTimeout(() => {
+    fg.style.strokeDashoffset = circ * (1 - to / 100);
+    document.querySelectorAll(".opt-bar i").forEach(b => b.style.width = b.dataset.w + "%");
+  }, 250);
+
+  let n = 0;
+  const inc = Math.max(to / 40, 0.1);
+  const timer = setInterval(() => {
+    n = Math.min(to, n + inc);
+    num.textContent = n.toFixed(1);
+    if (n >= to) clearInterval(timer);
+  }, 30);
+</script>
+{% endblock %}

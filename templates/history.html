@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}History - Crop Doctor{% endblock %}
+
+{% block content %}
+<main class="wrap">
+  <div class="lib-head">
+    <h2 class="page-title"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="nav_history">History</span></h2>
+    {% if items %}
+    <form method="POST" action="/history/clear" onsubmit="return confirm(T.hist_confirm)">
+      <button type="submit" class="small-btn"><i class="fa-solid fa-trash"></i> <span data-i18n="hist_clear">Clear history</span></button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if items %}
+  <div class="hist-grid">
+    {% for it in items %}
+    <a class="hcard" href="{{ url_for('result', scan_id=it.id) }}">
+      <img src="{{ url_for('static', filename='uploads/' + it.image) }}" alt="">
+      <div class="hinfo">
+        <small class="hcrop"><i class="fa-solid fa-seedling"></i> {{ it.crop or '-' }}</small>
+        <b class="hdis">{{ it.disease }}</b>
+        <div class="hmeta">
+          <span class="mini {{ 'ok' if it.healthy else 'bad' }}" data-i18n="{{ 'healthy' if it.healthy else 'disease' }}">{{ 'Healthy' if it.healthy else 'Disease detected' }}</span>
+          <span>{{ it.confidence }}%</span>
+        </div>
+        <small class="hdate">{{ it.created }}</small>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">
+    <i class="fa-solid fa-leaf"></i>
+    <p data-i18n="hist_empty">No scans yet. Tap the camera button to scan your first leaf.</p>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

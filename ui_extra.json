@@ -1,0 +1,52 @@
+{
+ "en": {
+  "nav_home": "Home", "nav_history": "History",
+  "hero_sub": "Identify your crop's problem in a few seconds.",
+  "start": "Start diagnosis", "browse": "Browse by crop", "explore": "Explore",
+  "tile_scan": "Scan a leaf", "tile_history": "History", "tile_library": "Disease library",
+  "tile_comm": "Community", "soon": "Soon", "tips": "Tips for a good photo",
+  "tip1": "Use daylight, not shadow.", "tip2": "Photograph one leaf, close up.",
+  "tip3": "Keep a plain background, like paper.", "tip4": "Keep the spots in focus.",
+  "scan_again": "Scan another leaf", "use_camera": "Use camera", "capture": "Capture", "close": "Close"
+ },
+ "kn": {
+  "nav_home": "ಮುಖಪುಟ", "nav_history": "ಇತಿಹಾಸ",
+  "hero_sub": "ಕೆಲವೇ ಕ್ಷಣಗಳಲ್ಲಿ ನಿಮ್ಮ ಬೆಳೆಯ ಸಮಸ್ಯೆಯನ್ನು ಗುರುತಿಸಿ.",
+  "start": "ರೋಗ ಪತ್ತೆ ಪ್ರಾರಂಭಿಸಿ", "browse": "ಬೆಳೆಯ ಪ್ರಕಾರ ನೋಡಿ", "explore": "ಅನ್ವೇಷಿಸಿ",
+  "tile_scan": "ಎಲೆ ಸ್ಕ್ಯಾನ್", "tile_history": "ಇತಿಹಾಸ", "tile_library": "ರೋಗ ಗ್ರಂಥಾಲಯ",
+  "tile_comm": "ಸಮುದಾಯ", "soon": "ಶೀಘ್ರದಲ್ಲೇ", "tips": "ಉತ್ತಮ ಫೋಟೋಗಾಗಿ ಸಲಹೆಗಳು",
+  "tip1": "ನೆರಳಿನಲ್ಲಿ ಅಲ್ಲ, ಹಗಲು ಬೆಳಕಿನಲ್ಲಿ ತೆಗೆಯಿರಿ.", "tip2": "ಒಂದೇ ಎಲೆಯ ಹತ್ತಿರದ ಫೋಟೋ ತೆಗೆಯಿರಿ.",
+  "tip3": "ಕಾಗದದಂತಹ ಸರಳ ಹಿನ್ನೆಲೆ ಇರಲಿ.", "tip4": "ಕಲೆಗಳು ಸ್ಪಷ್ಟವಾಗಿ ಕಾಣಲಿ.",
+  "scan_again": "ಇನ್ನೊಂದು ಎಲೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ", "use_camera": "ಕ್ಯಾಮೆರಾ ಬಳಸಿ", "capture": "ಫೋಟೋ ತೆಗೆಯಿರಿ", "close": "ಮುಚ್ಚಿ"
+ },
+ "hi": {
+  "nav_home": "होम", "nav_history": "इतिहास",
+  "hero_sub": "कुछ ही सेकंड में अपनी फसल की समस्या पहचानें।",
+  "start": "जांच शुरू करें", "browse": "फसल के अनुसार देखें", "explore": "खोजें",
+  "tile_scan": "पत्ती स्कैन", "tile_history": "इतिहास", "tile_library": "रोग पुस्तकालय",
+  "tile_comm": "समुदाय", "soon": "जल्द आ रहा है", "tips": "अच्छी फोटो के लिए सुझाव",
+  "tip1": "छाया में नहीं, दिन की रोशनी में फोटो लें।", "tip2": "एक ही पत्ती की नज़दीक से फोटो लें।",
+  "tip3": "कागज़ जैसी सादी पृष्ठभूमि रखें।", "tip4": "धब्बे साफ़ दिखने चाहिए।",
+  "scan_again": "दूसरी पत्ती स्कैन करें", "use_camera": "कैमरा इस्तेमाल करें", "capture": "फोटो लें", "close": "बंद करें"
+ },
+ "te": {
+  "nav_home": "హోమ్", "nav_history": "చరిత్ర",
+  "hero_sub": "కొన్ని సెకన్లలో మీ పంట సమస్యను గుర్తించండి.",
+  "start": "నిర్ధారణ ప్రారంభించండి", "browse": "పంట వారీగా చూడండి", "explore": "అన్వేషించండి",
+  "tile_scan": "ఆకు స్కాన్", "tile_history": "చరిత్ర", "tile_library": "వ్యాధుల గ్రంథాలయం",
+  "tile_comm": "సమాజం", "soon": "త్వరలో", "tips": "మంచి ఫోటో కోసం చిట్కాలు",
+  "tip1": "నీడలో కాకుండా పగటి వెలుతురులో తీయండి.", "tip2": "ఒకే ఆకును దగ్గరగా ఫోటో తీయండి.",
+  "tip3": "కాగితం లాంటి సాదా నేపథ్యం ఉంచండి.", "tip4": "మచ్చలు స్పష్టంగా కనిపించాలి.",
+  "scan_again": "మరో ఆకును స్కాన్ చేయండి", "use_camera": "కెమెరా వాడండి", "capture": "ఫోటో తీయండి", "close": "మూసివేయండి"
+ },
+ "ta": {
+  "nav_home": "முகப்பு", "nav_history": "வரலாறு",
+  "hero_sub": "சில விநாடிகளில் உங்கள் பயிரின் பிரச்சனையைக் கண்டறியுங்கள்.",
+  "start": "நோய் கண்டறிதலைத் தொடங்குங்கள்", "browse": "பயிர் வாரியாகப் பாருங்கள்", "explore": "ஆராயுங்கள்",
+  "tile_scan": "இலை ஸ்கேன்", "tile_history": "வரலாறு", "tile_library": "நோய் நூலகம்",
+  "tile_comm": "சமூகம்", "soon": "விரைவில்", "tips": "நல்ல புகைப்படத்திற்கான குறிப்புகள்",
+  "tip1": "நிழலில் அல்ல, பகல் வெளிச்சத்தில் எடுக்கவும்.", "tip2": "ஒரே இலையை அருகில் இருந்து படம் எடுக்கவும்.",
+  "tip3": "காகிதம் போன்ற எளிய பின்னணி வையுங்கள்.", "tip4": "புள்ளிகள் தெளிவாகத் தெரிய வேண்டும்.",
+  "scan_again": "மற்றொரு இலையை ஸ்கேன் செய்யுங்கள்", "use_camera": "கேமராவைப் பயன்படுத்துங்கள்", "capture": "படம் எடுக்கவும்", "close": "மூடு"
+ }
+}

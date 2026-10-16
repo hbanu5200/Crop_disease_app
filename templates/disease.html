@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ disease }} - Crop Doctor{% endblock %}
+
+{% block content %}
+<main class="wrap narrow">
+  <a class="back" href="{{ url_for('library', crop=crop) }}"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back</span></a>
+
+  <section class="card">
+    {% if img %}<img class="dimg" src="{{ img }}" alt="">{% endif %}
+    <p class="crop"><i class="fa-solid fa-seedling"></i> {{ crop_t }}</p>
+    <p class="disease">{{ disease }}</p>
+    <span class="badge {{ 'ok' if healthy else 'bad' }}">
+      <i class="fa-solid {{ 'fa-circle-check' if healthy else 'fa-triangle-exclamation' }}"></i>
+      <span data-i18n="{{ 'healthy' if healthy else 'disease' }}">{{ 'Healthy' if healthy else 'Disease detected' }}</span>
+    </span>
+  </section>
+
+  <section class="card">
+    <h2><i class="fa-solid fa-lightbulb"></i> <span data-i18n="advice">Advice</span></h2>
+    <div class="tips">
+      <div class="tip t1"><h4><i class="fa-solid fa-circle-info"></i> {{ labels[0] }}</h4><p>{{ info.about }}</p></div>
+      <div class="tip t2"><h4><i class="fa-solid fa-leaf"></i> {{ labels[1] }}</h4><p>{{ info.organic }}</p></div>
+      <div class="tip t3"><h4><i class="fa-solid fa-flask"></i> {{ labels[2] }}</h4><p>{{ info.chemical }}</p></div>
+      <div class="tip t4"><h4><i class="fa-solid fa-shield-halved"></i> {{ labels[3] }}</h4><p>{{ info.prevention }}</p></div>
+    </div>
+  </section>
+
+  <a class="btn-link" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="start">Start diagnosis</span></a>
+</main>
+{% endblock %}

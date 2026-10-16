@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Language - Crop Doctor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="lang-page">
+    <div class="lang-head">
+      <div class="lang-logo"><i class="fa-solid fa-leaf"></i></div>
+      <h1>Crop Doctor</h1>
+      <p>Choose your language</p>
+      <small>भाषा चुनें · ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ · భాషను ఎంచుకోండి · மொழியைத் தேர்ந்தெடுக்கவும்</small>
+    </div>
+
+    {% for code, name in langs.items() %}
+      <a class="lang-card {{ 'on' if code == lang else '' }}" href="{{ url_for('set_language', code=code) }}">
+        <b>{{ name }}</b>
+        <i class="fa-solid {{ 'fa-circle-check' if code == lang else 'fa-chevron-right' }}"></i>
+      </a>
+    {% endfor %}
+  </main>
+</body>
+</html>

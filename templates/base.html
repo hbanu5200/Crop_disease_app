@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Crop Doctor{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% set p = request.path %}
+  <header class="appbar">
+    <a href="/" class="brand"><i class="fa-solid fa-leaf"></i> <span data-i18n="brand">Crop Doctor</span></a>
+    <nav class="nav-links">
+      <a href="/" class="{{ 'on' if p == '/' else '' }}"><i class="fa-solid fa-house"></i> <span data-i18n="nav_home">Home</span></a>
+      <a href="/scan" class="{{ 'on' if p == '/scan' else '' }}"><i class="fa-solid fa-camera"></i> <span data-i18n="tile_scan">Scan a leaf</span></a>
+      <a href="/library" class="{{ 'on' if p == '/library' else '' }}"><i class="fa-solid fa-book-open"></i> <span data-i18n="tile_library">Disease library</span></a>
+      <a href="/history" class="{{ 'on' if p == '/history' else '' }}"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="nav_history">History</span></a>
+    </nav>
+
+    <div class="lang-menu">
+      <button type="button" class="lang-btn" id="langBtn">
+        <i class="fa-solid fa-language"></i>
+        <span class="lang-full">{{ langs[lang] }}</span>
+        <span class="lang-code">{{ lang|upper }}</span>
+        <i class="fa-solid fa-chevron-down caret"></i>
+      </button>
+      <div class="lang-list" id="langList">
+        {% for code, name in langs.items() %}
+          <a href="{{ url_for('set_language', code=code, next=request.path) }}" class="{{ 'on' if code == lang else '' }}">
+            {{ name }}
+            {% if code == lang %}<i class="fa-solid fa-circle-check"></i>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="footer">Crop Doctor &middot; College mini project &middot; Built with Flask, TensorFlow Lite and SQLite</footer>
+
+  <nav class="tabbar">
+    <a href="/" class="{{ 'on' if p == '/' else '' }}"><i class="fa-solid fa-house"></i><span data-i18n="nav_home">Home</span></a>
+    <a href="/scan" class="fab" aria-label="Scan"><i class="fa-solid fa-camera"></i></a>
+    <a href="/history" class="{{ 'on' if p == '/history' else '' }}"><i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="nav_history">History</span></a>
+  </nav>
+
+  <script>
+    const UI = {{ ui|tojson }};
+    const LANG = "{{ lang }}";
+    const T = UI[LANG] || UI.en;
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      if (T[el.dataset.i18n]) el.textContent = T[el.dataset.i18n];
+    });
+
+    const langBtn = document.getElementById("langBtn");
+    const langList = document.getElementById("langList");
+    langBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      langList.classList.toggle("open");
+    });
+    document.addEventListener("click", () => langList.classList.remove("open"));
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "Tomato___Early_blight": {
+    "about": "A fungal disease causing brown spots with rings on older leaves first.",
+    "organic": "Remove infected leaves. Spray neem oil or a copper-based fungicide. Mulch the soil.",
+    "chemical": "Mancozeb or chlorothalonil spray, used exactly as the product label says.",
+    "prevention": "Rotate crops every 2-3 years, water at the base (not on leaves), keep plants spaced."
+  },
+  "Tomato___Late_blight": {
+    "about": "A fast-spreading disease causing dark, water-soaked patches. Worse in cool, wet weather.",
+    "organic": "Remove and destroy infected plants. Copper-based spray can slow it.",
+    "chemical": "Mancozeb or metalaxyl-based fungicide as per label. Act quickly.",
+    "prevention": "Avoid wet leaves, improve airflow, use resistant varieties, do not compost infected plants."
+  },
+  "Tomato___healthy": {
+    "about": "The leaf looks healthy.",
+    "organic": "No treatment needed.",
+    "chemical": "No treatment needed.",
+    "prevention": "Keep checking regularly, water at the base, and keep the field clean."
+  },
+  "default": {
+    "about": "Advice for this disease is coming soon.",
+    "organic": "Remove badly infected leaves and keep the area clean.",
+    "chemical": "Please ask your local agriculture officer before using any spray.",
+    "prevention": "Rotate crops, avoid overhead watering and keep good spacing."
+  }
+}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  @keyframes slideLeft { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: none; } }
+  @keyframes slideRight { from { opacity: 0; transform: translateX(90px); } to { opacity: 1; transform: none; } }
+  @keyframes pop { from { opacity: 0; transform: scale(0.85) translateY(24px); } to { opacity: 1; transform: none; } }
+  @keyframes scrollx { to { transform: translateX(-50%); } }
+
+  .hero2 .greet { animation: slideLeft 0.8s both; }
+  .hero2 h1 { animation: slideLeft 0.8s 0.15s both; }
+  .hero2 .rotator { animation: slideLeft 0.8s 0.3s both; }
+  .hero2 p.lead { animation: slideLeft 0.8s 0.4s both; }
+  .hero2 .hbadges { animation: slideLeft 0.8s 0.55s both; }
+  .hero2 .hbtns { animation: slideLeft 0.8s 0.7s both; }
+  .phone-wrap { animation: slideRight 0.9s 0.3s both; }
+
+  .rotator { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; font-size: 15px; color: #c8e6c9; }
+  .rot-wrap { position: relative; display: inline-block; height: 30px; min-width: 220px; overflow: hidden; }
+  .rot-item {
+    position: absolute; left: 0; top: 0; line-height: 30px; font-size: 20px; font-weight: 700; color: white;
+    white-space: nowrap; opacity: 0; transform: translateY(100%); transition: opacity 0.6s, transform 0.6s;
+  }
+  .rot-item.in { opacity: 1; transform: none; }
+  .rot-item.out { opacity: 0; transform: translateY(-100%); }
+
+  .stat { animation: pop 0.6s backwards; }
+  .stat:nth-child(2) { animation-delay: 0.15s; }
+  .stat:nth-child(3) { animation-delay: 0.3s; }
+
+  .marquee { overflow: hidden; background: linear-gradient(90deg, #1b5e20, #2e7d32); color: white; padding: 13px 0; border-radius: 18px; margin-bottom: 18px; }
+  .track { display: flex; width: max-content; animation: scrollx 32s linear infinite; }
+  .track span { display: inline-flex; align-items: center; gap: 10px; padding-right: 50px; font-weight: 600; font-size: 15px; white-space: nowrap; }
+  .track i { color: #a5d6a7; }
+  .marquee:hover .track { animation-play-state: paused; }
+
+  .reveal .step, .reveal .feat { opacity: 0; transform: translateY(26px); transition: opacity 0.6s, transform 0.6s; }
+  .reveal.show .step, .reveal.show .feat { opacity: 1; transform: none; }
+  .reveal.show .step:nth-child(2), .reveal.show .feat:nth-child(2) { transition-delay: 0.15s; }
+  .reveal.show .step:nth-child(3), .reveal.show .feat:nth-child(3) { transition-delay: 0.3s; }
+  .reveal.show .feat:nth-child(4) { transition-delay: 0.45s; }
+  .reveal.show .step:hover, .reveal.show .feat:hover { transform: translateY(-6px); transition-delay: 0s; }
+
+  @media (min-width: 900px) {
+    .wrap.home .marquee { grid-column: 1 / -1; margin-bottom: 0; }
+  }
+</style>
+
+<section class="hero2" {% if sample %}style="--bg: url('{{ sample }}')"{% endif %}>
+  <i class="fa-solid fa-leaf deco d1"></i>
+  <i class="fa-solid fa-seedling deco d2"></i>
+  <i class="fa-solid fa-leaf deco d3"></i>
+  <div class="hero2-inner">
+    <div>
+      <p class="greet"><i class="fa-solid fa-hands-praying"></i> <span data-i18n="namaste">Namaste!</span></p>
+      <h1 data-i18n="hero_title">Know your crop's health in seconds</h1>
+
+      <p class="rotator">
+        <span data-i18n="supported">Works with these crops</span>
+        <span class="rot-wrap">
+          {% for c in chips %}<span class="rot-item">{{ c.t }}</span>{% endfor %}
+        </span>
+      </p>
+
+      <p class="lead" data-i18n="hero_sub">Identify your crop's problem in a few seconds.</p>
+
+      <div class="hbadges">
+        <span class="hbadge"><i class="fa-solid fa-bug"></i> 38 <span data-i18n="stat_diseases">Diseases</span></span>
+        <span class="hbadge"><i class="fa-solid fa-language"></i> 5 <span data-i18n="stat_languages">Languages</span></span>
+        <span class="hbadge"><i class="fa-solid fa-volume-high"></i> <span data-i18n="listen">Listen</span></span>
+      </div>
+
+      <div class="hbtns">
+        <a class="btn-white" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="start">Start diagnosis</span></a>
+        <a class="btn-ghost" href="/library"><i class="fa-solid fa-book-open"></i> <span data-i18n="tile_library">Disease library</span></a>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone">
+        <p class="ex" data-i18n="example">Example result</p>
+        <div class="frame">
+          {% if sample %}<img src="{{ sample }}" alt="">{% endif %}
+          <div class="cam"><i class="fa-solid fa-camera"></i></div>
+        </div>
+        <div class="mini-result">
+          <b>{{ sample_name }}</b>
+          <small><i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="disease">Disease detected</span></small>
+        </div>
+        <div class="mini-btn"><i class="fa-solid fa-lightbulb"></i> <span data-i18n="advice">Advice</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap home">
+  <section class="stats">
+    <div class="stat"><i class="fa-solid fa-bug"></i><b class="count" data-to="38">38</b><span data-i18n="stat_diseases">Diseases</span></div>
+    <div class="stat"><i class="fa-solid fa-language"></i><b class="count" data-to="5">5</b><span data-i18n="stat_languages">Languages</span></div>
+    <div class="stat"><i class="fa-solid fa-bullseye"></i><b class="count" data-to="92" data-suf="%">92%</b><span data-i18n="stat_accuracy">Test accuracy</span></div>
+  </section>
+
+  <div class="marquee">
+    <div class="track">
+      {% for k in range(2) %}
+      <span><i class="fa-solid fa-language"></i> <b data-i18n="feat1_t">In your language</b></span>
+      <span><i class="fa-solid fa-volume-high"></i> <b data-i18n="feat2_t">Voice advice</b></span>
+      <span><i class="fa-solid fa-flask"></i> <b data-i18n="feat3_t">Treatment advice</b></span>
+      <span><i class="fa-solid fa-clock-rotate-left"></i> <b data-i18n="feat4_t">Scan history</b></span>
+      <span><i class="fa-solid fa-bug"></i> 38 <b data-i18n="stat_diseases">Diseases</b></span>
+      <span><i class="fa-solid fa-camera"></i> <b data-i18n="step1_t">Scan</b> &rarr; <b data-i18n="step2_t">Detect</b> &rarr; <b data-i18n="step3_t">Act</b></span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <section class="how reveal">
+    <h2 data-i18n="how_title">How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num"><i class="fa-solid fa-camera"></i></div>
+        <div><b data-i18n="step1_t">Scan</b><p data-i18n="step1_d">Take or upload a photo of one leaf.</p></div>
+      </div>
+      <div class="step">
+        <div class="num"><i class="fa-solid fa-microchip"></i></div>
+        <div><b data-i18n="step2_t">Detect</b><p data-i18n="step2_d">The AI model finds the disease in seconds.</p></div>
+      </div>
+      <div class="step">
+        <div class="num"><i class="fa-solid fa-volume-high"></i></div>
+        <div><b data-i18n="step3_t">Act</b><p data-i18n="step3_d">Get treatment and prevention advice, read aloud in your language.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feats reveal">
+    <h2 data-i18n="feat_title">Why Crop Doctor</h2>
+    <div class="feat-grid">
+      <div class="feat"><i class="fa-solid fa-language"></i><b data-i18n="feat1_t">In your language</b><p data-i18n="feat1_d">Results and advice in English, Kannada, Hindi, Telugu and Tamil.</p></div>
+      <div class="feat"><i class="fa-solid fa-volume-high"></i><b data-i18n="feat2_t">Voice advice</b><p data-i18n="feat2_d">Tap Listen and the advice is read aloud.</p></div>
+      <div class="feat"><i class="fa-solid fa-flask"></i><b data-i18n="feat3_t">Treatment advice</b><p data-i18n="feat3_d">Organic and chemical options with prevention tips.</p></div>
+      <div class="feat"><i class="fa-solid fa-clock-rotate-left"></i><b data-i18n="feat4_t">Scan history</b><p data-i18n="feat4_d">Every scan is saved so you can look back.</p></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="browse">Browse by crop</h2>
+    <div class="chips wrapchips">
+      {% for c in chips %}
+        <a class="chip" href="{{ url_for('library', crop=c.en) }}">
+          {% if c.img %}<img src="{{ c.img }}" alt="">{% else %}<i class="fa-solid fa-seedling"></i>{% endif %}
+          {{ c.t }}
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="explore">Explore</h2>
+    <div class="grid">
+      <a class="tile" href="/scan"><i class="fa-solid fa-leaf"></i><span data-i18n="tile_scan">Scan a leaf</span></a>
+      <a class="tile" href="/history"><i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="tile_history">History</span></a>
+      <a class="tile" href="/library"><i class="fa-solid fa-book-open"></i><span data-i18n="tile_library">Disease library</span></a>
+      <a class="tile soon" href="#"><i class="fa-solid fa-users"></i><span data-i18n="tile_comm">Community</span><span class="soon-tag" data-i18n="soon">Soon</span></a>
+    </div>
+  </section>
+
+  <section class="card tips-card">
+    <h2 data-i18n="tips">Tips for a good photo</h2>
+    <div class="tip-grid">
+      <div class="tip-row"><i class="fa-solid fa-sun"></i><span data-i18n="tip1">Use daylight, not shadow.</span></div>
+      <div class="tip-row"><i class="fa-solid fa-leaf"></i><span data-i18n="tip2">Photograph one leaf, close up.</span></div>
+      <div class="tip-row"><i class="fa-solid fa-image"></i><span data-i18n="tip3">Keep a plain background, like paper.</span></div>
+      <div class="tip-row"><i class="fa-solid fa-bullseye"></i><span data-i18n="tip4">Keep the spots in focus.</span></div>
+    </div>
+  </section>
+
+  <section class="cta reveal">
+    <h2 data-i18n="cta_t">Ready to check a leaf?</h2>
+    <p data-i18n="cta_d">Take a photo and get advice in seconds.</p>
+    <a class="btn-white" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="start">Start diagnosis</span></a>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll(".count").forEach(el => {
+    const to = +el.dataset.to, suf = el.dataset.suf || "";
+    let n = 0;
+    const step = Math.max(1, Math.round(to / 40));
+    const t = setInterval(() => {
+      n = Math.min(to, n + step);
+      el.textContent = n + suf;
+      if (n >= to) clearInterval(t);
+    }, 30);
+  });
+
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add("show"); io.unobserve(e.target); }
+  }), { threshold: 0.12 });
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+  const items = document.querySelectorAll(".rot-item");
+  if (items.length) {
+    let i = 0;
+    items[0].classList.add("in");
+    setInterval(() => {
+      const prev = items[i];
+      prev.classList.remove("in");
+      prev.classList.add("out");
+      i = (i + 1) % items.length;
+      items[i].classList.remove("out");
+      items[i].classList.add("in");
+      setTimeout(() => prev.classList.remove("out"), 700);
+    }, 2200);
+  }
+</script>
+{% endblock %}

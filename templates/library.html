@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Library - Crop Doctor{% endblock %}
+
+{% block content %}
+<main class="wrap">
+  <div class="lib-head">
+    <h2 class="page-title"><i class="fa-solid fa-book-open"></i> <span data-i18n="tile_library">Disease library</span></h2>
+    <div class="searchbox">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="search" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="chips wrapchips">
+    {% for c in chips %}
+      <a class="chip {{ 'on' if c.en == crop else '' }}" href="{{ url_for('library', crop=c.en) }}">
+        {% if c.img %}<img src="{{ c.img }}" alt="">{% else %}<i class="fa-solid fa-seedling"></i>{% endif %}
+        {{ c.t }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <h3 class="crop-title"><i class="fa-solid fa-seedling"></i> {{ crop_t }}</h3>
+
+  <div class="lib-grid" id="libGrid">
+    {% for it in items %}
+    <a class="dcard" href="{{ url_for('disease_page', label=it.label) }}" data-name="{{ it.disease|lower }}">
+      {% if it.img %}
+        <img src="{{ it.img }}" alt="{{ it.disease }}">
+      {% else %}
+        <div class="noimg"><i class="fa-solid fa-leaf"></i></div>
+      {% endif %}
+      <span class="pill {{ 'ok' if it.healthy else 'bad' }}" data-i18n="{{ 'lib_healthy' if it.healthy else 'lib_disease' }}">{{ 'Healthy leaf' if it.healthy else 'Disease' }}</span>
+      <div class="dbody">
+        <b>{{ it.disease }}</b>
+        {% if it.has_advice %}
+          <small><i class="fa-solid fa-circle-check"></i> <span data-i18n="lib_advice_ready">Advice ready</span></small>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <p id="noRes" class="card" style="display:none" data-i18n="no_results">No diseases found.</p>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const search = document.getElementById("search");
+  search.placeholder = T.lib_search || "Search diseases...";
+  search.addEventListener("input", () => {
+    const q = search.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll("#libGrid .dcard").forEach(c => {
+      const ok = c.dataset.name.includes(q);
+      c.style.display = ok ? "" : "none";
+      if (ok) shown++;
+    });
+    document.getElementById("noRes").style.display = shown ? "none" : "block";
+  });
+</script>
+{% endblock %}
