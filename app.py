@@ -447,6 +447,11 @@ def speak():
     buf.seek(0)
     return send_file(buf, mimetype="audio/mpeg")
 
-
+@app.route("/service-worker.js")
+def service_worker():
+    from flask import send_from_directory
+    return send_from_directory(
+        "static", "service-worker.js", mimetype="application/javascript"
+    )
 if __name__ == "__main__":
     app.run(debug=True)
