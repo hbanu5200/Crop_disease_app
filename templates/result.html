@@ -16,19 +16,22 @@
   .res-hero h1 { margin: 14px 0 12px; font-size: 32px; line-height: 1.15; animation: dropIn 0.7s both; }
   @keyframes dropIn { from { opacity: 0; transform: translateY(-26px); } to { opacity: 1; transform: none; } }
 
-  .wrap.result2 { max-width: 1100px; margin: -30px auto 40px; padding: 0 14px; position: relative; z-index: 2; display: grid; gap: 18px; }
+  .wrap.result2 { max-width: 1100px; margin: -30px auto 40px; padding: 0 14px; position: relative; z-index: 2; display: grid; gap: 16px; }
   .wrap.result2 .card { margin-bottom: 0; }
 
-  .photo { position: relative; overflow: hidden; border-radius: 16px; }
-  .photo img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
-  .photo::after {
-    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; opacity: 0;
-    background: linear-gradient(90deg, transparent, #76ff03, transparent);
-    box-shadow: 0 0 16px #76ff03; animation: scanmove 1.5s ease-in-out 2;
-  }
-  @keyframes scanmove { 0% { top: 0; opacity: 1; } 95% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+  /* photo + summary */
+  .sum { display: grid; gap: 18px; }
+  .photo { overflow: hidden; border-radius: 16px; }
+  .photo img { display: block; width: 100%; height: 100%; max-height: 300px; object-fit: cover; }
+  @media (min-width: 760px) { .sum { grid-template-columns: 320px 1fr; align-items: center; } }
 
-  .gauge-row { display: flex; align-items: center; gap: 18px; margin-top: 18px; }
+  /* old library result: hidden unless the AI fails */
+  .gauge-row, .warn, .old-advice { display: none; }
+  body.ai-failed .gauge-row { display: flex; }
+  body.ai-failed .warn { display: block; }
+  body.ai-failed .old-advice { display: block; }
+
+  .gauge-row { align-items: center; gap: 18px; margin-top: 4px; }
   .gauge { position: relative; width: 130px; height: 130px; flex: 0 0 130px; }
   .gauge svg { width: 100%; height: 100%; }
   .g-bg { fill: none; stroke: #e8f0e8; stroke-width: 10; }
@@ -43,15 +46,14 @@
   .g-text span { font-size: 14px; font-weight: 700; color: #1b5e20; }
   .g-text small { margin-top: 3px; font-size: 11px; color: #667; }
   .gauge-side { flex: 1; min-width: 0; }
-
   .opt { margin: 10px 0; }
   .opt-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: #445; }
   .opt-bar { height: 8px; margin-top: 4px; background: #e8f0e8; border-radius: 8px; overflow: hidden; }
   .opt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #90a4ae, #607d8b); border-radius: 8px; transition: width 1.2s ease; }
-
   .stag { opacity: 0; animation: slideIn 0.6s forwards; animation-delay: var(--d, 0s); }
   @keyframes slideIn { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
 
+  /* buttons */
   .act { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .act button, .act a {
     margin: 0; width: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -62,11 +64,45 @@
   .act .b-print:hover { background: #e8f5e9; }
   .act a.b-scan { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; }
   .act a.b-scan:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(21, 101, 192, 0.4); }
+  .act4 { margin-top: 0; }
+  @media (min-width: 760px) { .act4 { grid-template-columns: repeat(4, 1fr); } }
+
+  /* AI summary */
+  .ai-load { text-align: center; padding: 22px 10px; color: #2e7d32; font-weight: 600; }
+  .ai-spin { width: 42px; height: 42px; margin: 0 auto 12px; border: 5px solid #c8e6c9; border-top-color: #2e7d32; border-radius: 50%; animation: aispin 1s linear infinite; }
+  @keyframes aispin { to { transform: rotate(360deg); } }
+  .ai-err { display: none; background: #ffebee; color: #b71c1c; padding: 12px 14px; border-radius: 14px; font-weight: 600; }
+  button.ai-retry { width: auto; margin: 10px 0 0; padding: 10px 18px; font-size: 14px; background: white; color: #b71c1c; border: 1px solid #ef9a9a; box-shadow: none; }
+  button.ai-retry:hover { background: #ffebee; transform: none; box-shadow: none; }
+  .ai-chip { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px 14px; border-radius: 20px; background: #e8f5e9; color: #2e7d32; font-size: 13px; font-weight: 700; }
+  .ai-plant { margin: 0 0 4px; font-size: 28px; }
+  .ai-cond { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
+  .ai-cond.ok { color: #2e7d32; } .ai-cond.bad { color: #c62828; }
+  .ai-sev { display: inline-block; margin-left: 10px; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; vertical-align: middle; }
+  .ai-sev.none { background: #c8e6c9; color: #1b5e20; } .ai-sev.mild { background: #fff9c4; color: #827717; }
+  .ai-sev.moderate { background: #ffe0b2; color: #e65100; } .ai-sev.severe { background: #ffcdd2; color: #b71c1c; }
+  .ai-bar { height: 12px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 10px 0 4px; }
+  .ai-bar b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #66bb6a, #2e7d32); border-radius: 10px; transition: width 1.2s; }
+  .ai-conf { color: #556; font-size: 13px; font-weight: 600; }
+  .ai-seen { margin: 12px 0 0; line-height: 1.6; color: #334; }
+
+  /* advice grid */
+  .ai-grid { display: grid; gap: 14px; }
+  @media (min-width: 760px) { .ai-grid { grid-template-columns: 1fr 1fr; } }
+  .ai-tip { padding: 16px 18px; border-radius: 18px; border-top: 5px solid; box-shadow: 0 4px 14px rgba(0,0,0,0.06); animation: slideIn 0.5s both; }
+  .ai-tip h4 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+  .ai-tip h4 i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: white; font-size: 14px; }
+  .ai-tip ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+  .ai-tip.o { background: #f1f8f1; border-color: #43a047; } .ai-tip.o h4 i { background: #43a047; }
+  .ai-tip.c { background: #fff7ec; border-color: #fb8c00; } .ai-tip.c h4 i { background: #fb8c00; }
+  .ai-tip.p { background: #f8eefa; border-color: #8e24aa; } .ai-tip.p h4 i { background: #8e24aa; }
+  .ai-tip.e { background: #eef6fd; border-color: #1e88e5; } .ai-tip.e h4 i { background: #1e88e5; }
+  .ai-note { display: none; background: #fff8e1; color: #7a5b00; padding: 12px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
 
   @media (min-width: 900px) {
     .res-hero-inner { padding: 44px 48px 78px; }
     .res-hero h1 { font-size: 44px; }
-    .wrap.result2 { grid-template-columns: 1fr 1.15fr; align-items: start; padding: 0 32px; margin-top: -46px; }
+    .wrap.result2 { padding: 0 32px; margin-top: -46px; }
   }
   @media print {
     .appbar, .tabbar, .footer, .act, audio { display: none !important; }
@@ -74,52 +110,64 @@
   }
 </style>
 
-<section class="res-hero {{ 'ok' if healthy else 'bad' }}">
+<section class="res-hero {{ 'ok' if healthy else 'bad' }}" id="hero">
   <div class="res-hero-inner">
-    <span class="res-chip"><i class="fa-solid fa-seedling"></i> {{ crop or '-' }}</span>
-    <h1>{{ disease }}</h1>
+    <span class="res-chip"><i class="fa-solid fa-seedling"></i> <span id="heroCrop">{{ crop or '-' }}</span></span>
+    <h1 id="heroTitle">{{ disease }}</h1>
     <span class="res-badge">
       <i class="fa-solid {{ 'fa-circle-check' if healthy else 'fa-triangle-exclamation' }}"></i>
-      <span data-i18n="{{ 'healthy' if healthy else 'disease' }}">{{ 'Healthy' if healthy else 'Disease detected' }}</span>
+      <span id="heroBadge" data-i18n="{{ 'healthy' if healthy else 'disease' }}">{{ 'Healthy' if healthy else 'Disease detected' }}</span>
     </span>
   </div>
 </section>
 
 <main class="wrap result2">
-  <section class="card">
+  <section class="card sum">
     <div class="photo"><img src="{{ url_for('static', filename='uploads/' + image) }}" alt=""></div>
 
-    <div class="gauge-row">
-      <div class="gauge">
-        <svg viewBox="0 0 120 120">
-          <circle class="g-bg" cx="60" cy="60" r="52"></circle>
-          <circle class="g-fg {{ 'low' if low else '' }}" id="gfg" cx="60" cy="60" r="52"></circle>
-        </svg>
-        <div class="g-text">
-          <div><b id="gnum" data-to="{{ confidence }}">0</b><span>%</span></div>
-          <small data-i18n="confidence">Confidence</small>
+    <div class="sum-info">
+      {% if lensx is defined %}
+      <div class="ai-load" id="aiLoad"><div class="ai-spin"></div>{{ lensx.working }}</div>
+      <div class="ai-err" id="aiErr"></div>
+      <div id="aiSummary"></div>
+      {% endif %}
+
+      <div class="gauge-row">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120">
+            <circle class="g-bg" cx="60" cy="60" r="52"></circle>
+            <circle class="g-fg {{ 'low' if low else '' }}" id="gfg" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="g-text">
+            <div><b id="gnum" data-to="{{ confidence }}">0</b><span>%</span></div>
+            <small data-i18n="confidence">Confidence</small>
+          </div>
+        </div>
+        <div class="gauge-side">
+          {% if others %}
+          <b data-i18n="others">Other possibilities</b>
+          {% for name, c in others %}
+          <div class="opt">
+            <div class="opt-top"><span>{{ name }}</span><span>{{ c }}%</span></div>
+            <div class="opt-bar"><i data-w="{{ c }}"></i></div>
+          </div>
+          {% endfor %}
+          {% endif %}
         </div>
       </div>
 
-      <div class="gauge-side">
-        {% if others %}
-        <b data-i18n="others">Other possibilities</b>
-        {% for name, c in others %}
-        <div class="opt">
-          <div class="opt-top"><span>{{ name }}</span><span>{{ c }}%</span></div>
-          <div class="opt-bar"><i data-w="{{ c }}"></i></div>
-        </div>
-        {% endfor %}
-        {% endif %}
-      </div>
+      {% if low %}
+      <div class="warn"><i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="unsure">Not very sure. Retake a clear, close photo of one leaf in good light.</span></div>
+      {% endif %}
     </div>
-
-    {% if low %}
-    <div class="warn"><i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="unsure">Not very sure. Retake a clear, close photo of one leaf in good light.</span></div>
-    {% endif %}
   </section>
 
-  <section class="card">
+  <div id="aiAdvice"></div>
+  {% if lensx is defined %}
+  <div class="ai-note" id="aiNote">{{ lensx.notice }}</div>
+  {% endif %}
+
+  <section class="card old-advice">
     <h2><i class="fa-solid fa-lightbulb"></i> <span data-i18n="advice">Advice</span></h2>
     <div class="tips">
       <div class="tip t1 stag" style="--d:.2s"><h4><i class="fa-solid fa-circle-info"></i> {{ labels[0] }}</h4><p>{{ info.about }}</p></div>
@@ -127,7 +175,6 @@
       <div class="tip t3 stag" style="--d:.6s"><h4><i class="fa-solid fa-flask"></i> {{ labels[2] }}</h4><p>{{ info.chemical }}</p></div>
       <div class="tip t4 stag" style="--d:.8s"><h4><i class="fa-solid fa-shield-halved"></i> {{ labels[3] }}</h4><p>{{ info.prevention }}</p></div>
     </div>
-
     <div class="act">
       <button type="button" onclick="speak()"><i class="fa-solid fa-volume-high"></i> <span data-i18n="listen">Listen</span></button>
       <button type="button" class="stop" onclick="stopSpeak()"><i class="fa-solid fa-stop"></i> <span data-i18n="stop">Stop</span></button>
@@ -176,4 +223,159 @@
     if (n >= to) clearInterval(timer);
   }, 30);
 </script>
+
+{% if lensx is defined %}
+<script>
+  const LT = {{ lensx|tojson }};
+  const SCAN_ID = {{ request.view_args.scan_id }};
+  const sevLabel = {none: LT.sev_none, mild: LT.sev_mild, moderate: LT.sev_moderate, severe: LT.sev_severe};
+  const aiLoad = document.getElementById("aiLoad");
+  const aiErr = document.getElementById("aiErr");
+  const aiSummary = document.getElementById("aiSummary");
+  const aiAdvice = document.getElementById("aiAdvice");
+  const aiNote = document.getElementById("aiNote");
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function tipCard(cls, icon, title, items) {
+    if (!items || !items.length) return null;
+    const box = el("div", "ai-tip " + cls);
+    const h = el("h4");
+    h.innerHTML = '<i class="fa-solid ' + icon + '"></i>';
+    h.append(el("span", "", title));
+    box.append(h);
+    const ul = el("ul");
+    items.forEach(x => ul.append(el("li", "", x)));
+    box.append(ul);
+    return box;
+  }
+
+  function speechText(d) {
+    return [d.plant_name, d.condition, d.what_i_see]
+      .concat(d.organic_treatment || [], d.chemical_treatment || [], d.prevention || [], d.extra_advice || [])
+      .filter(Boolean).join(". ");
+  }
+
+  function updateHero(d) {
+    document.getElementById("heroCrop").textContent = d.plant_name || "-";
+    document.getElementById("heroTitle").textContent = d.condition || "";
+    const healthyAI = d.severity_level === "none";
+    const heroBox = document.getElementById("hero");
+    heroBox.classList.toggle("ok", healthyAI);
+    heroBox.classList.toggle("bad", !healthyAI);
+    const badge = document.getElementById("heroBadge");
+    badge.removeAttribute("data-i18n");
+    badge.textContent = sevLabel[d.severity_level];
+  }
+
+  function showAI(d) {
+    updateHero(d);
+
+    aiSummary.innerHTML = "";
+    const chip = el("span", "ai-chip");
+    chip.innerHTML = '<i class="fa-solid fa-leaf"></i>';
+    chip.append(d.plant_part || LT.plant);
+    aiSummary.append(chip);
+    aiSummary.append(el("h3", "ai-plant", d.plant_name || "?"));
+    const cond = el("p", "ai-cond " + (d.severity_level === "none" ? "ok" : "bad"), d.condition || "");
+    cond.append(el("span", "ai-sev " + d.severity_level, sevLabel[d.severity_level]));
+    aiSummary.append(cond);
+    const bar = el("div", "ai-bar");
+    const fill = el("b");
+    bar.append(fill);
+    aiSummary.append(bar);
+    aiSummary.append(el("span", "ai-conf", LT.confidence + ": " + d.confidence + "%"));
+    if (d.what_i_see) aiSummary.append(el("p", "ai-seen", d.what_i_see));
+    setTimeout(() => { fill.style.width = d.confidence + "%"; }, 100);
+
+    aiAdvice.innerHTML = "";
+    const grid = el("div", "ai-grid");
+    [
+      ["o", "fa-leaf", LT.organic, d.organic_treatment],
+      ["c", "fa-flask", LT.chemical, d.chemical_treatment],
+      ["p", "fa-shield-halved", LT.prevention, d.prevention],
+      ["e", "fa-lightbulb", LT.tips, d.extra_advice],
+    ].forEach(x => {
+      const c = tipCard(x[0], x[1], x[2], x[3]);
+      if (c) grid.append(c);
+    });
+    aiAdvice.append(grid);
+
+    const audio = new Audio();
+    const row = el("div", "act act4");
+    const b1 = el("button");
+    b1.type = "button";
+    b1.innerHTML = '<i class="fa-solid fa-volume-high"></i> ';
+    b1.append(LT.listen);
+    const b2 = el("button", "stop");
+    b2.type = "button";
+    b2.innerHTML = '<i class="fa-solid fa-stop"></i> ';
+    b2.append(LT.stop);
+    const pr = el("button", "b-print");
+    pr.type = "button";
+    pr.innerHTML = '<i class="fa-solid fa-print"></i> Print';
+    const sc = el("a", "b-scan");
+    sc.href = "/scan";
+    sc.innerHTML = '<i class="fa-solid fa-camera"></i> Scan another leaf';
+    row.append(b1, b2, pr, sc);
+    aiAdvice.append(row);
+
+    b1.addEventListener("click", async () => {
+      const r = await fetch("/speak", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: speechText(d), lang: LANG})
+      });
+      const blob = await r.blob();
+      audio.src = URL.createObjectURL(blob);
+      audio.play();
+    });
+    b2.addEventListener("click", () => { audio.pause(); audio.currentTime = 0; });
+    pr.addEventListener("click", () => window.print());
+
+    aiNote.style.display = "block";
+  }
+
+  function showAIError(msg) {
+    document.body.classList.add("ai-failed");
+    aiErr.innerHTML = "";
+    aiErr.append(el("div", "", msg));
+    const retry = el("button", "ai-retry");
+    retry.type = "button";
+    retry.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ';
+    retry.append(LT.retry);
+    retry.addEventListener("click", loadAI);
+    aiErr.append(retry);
+    aiErr.style.display = "block";
+  }
+
+  async function loadAI() {
+    document.body.classList.remove("ai-failed");
+    aiErr.style.display = "none";
+    aiSummary.innerHTML = "";
+    aiAdvice.innerHTML = "";
+    aiLoad.style.display = "block";
+    const ctl = new AbortController();
+    const abortTimer = setTimeout(() => ctl.abort(), 45000);
+    try {
+      const r = await fetch("/lens/analyze/" + SCAN_ID, {signal: ctl.signal});
+      const d = await r.json();
+      if (!r.ok || d.error) showAIError(d.error || LT.fail);
+      else showAI(d);
+    } catch (e) {
+      console.log("AI error:", e);
+      showAIError(LT.fail);
+    }
+    clearTimeout(abortTimer);
+    aiLoad.style.display = "none";
+  }
+
+  loadAI();
+</script>
+{% endif %}
 {% endblock %}

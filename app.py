@@ -447,6 +447,10 @@ def speak():
     buf.seek(0)
     return send_file(buf, mimetype="audio/mpeg")
 
-
+try:
+    from lens import lens_bp
+    app.register_blueprint(lens_bp)
+except Exception as e:
+    print("Leaf Lens not loaded:", e)
 if __name__ == "__main__":
     app.run(debug=True)
