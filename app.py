@@ -453,5 +453,10 @@ def service_worker():
     return send_from_directory(
         "static", "service-worker.js", mimetype="application/javascript"
     )
+try:
+    from lens import lens_bp
+    app.register_blueprint(lens_bp)
+except Exception as e:
+    print("Leaf Lens not loaded:", e)
 if __name__ == "__main__":
     app.run(debug=True)

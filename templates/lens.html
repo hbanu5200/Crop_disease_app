@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Leaf Lens - Crop Doctor{% endblock %}
+
+{% block content %}
+<style>
+  .lz-hero{position:relative;overflow:hidden;color:#fff;background:linear-gradient(135deg,#0d47a1 0%,#1565c0 45%,#2e7d32 100%)}
+  .lz-hero::after{content:"";position:absolute;width:320px;height:320px;right:-90px;top:-130px;border-radius:50%;background:rgba(255,255,255,.09)}
+  .lz-hero-inner{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:26px 20px 54px}
+  .lz-hero h1{margin:0 0 6px;font-size:28px;display:flex;align-items:center;gap:12px}
+  .lz-hero p{margin:0;max-width:560px;color:#e3f2fd}
+  .lz-wrap{max-width:760px;margin:-30px auto 40px;padding:0 14px;position:relative;z-index:2}
+  .lz-wrap .card{margin-bottom:16px}
+  .lz-drop{display:flex;flex-direction:column;align-items:center;gap:8px;padding:32px 14px;text-align:center;cursor:pointer;border:2.5px dashed #64b5f6;border-radius:22px;background:linear-gradient(180deg,#f3f9ff,#eaf4ff);color:#1565c0;transition:.25s;font-weight:600;word-break:break-all}
+  .lz-drop:hover{background:#e3f2fd;transform:translateY(-3px)}
+  .lz-drop i{font-size:40px}
+  .lz-prev{display:none;width:100%;max-height:280px;object-fit:cover;border-radius:16px;margin-top:12px}
+  .lz-load{display:none;text-align:center;padding:30px 10px}
+  .lz-spin{width:48px;height:48px;margin:0 auto 14px;border:5px solid #bbdefb;border-top-color:#1565c0;border-radius:50%;animation:lzspin 1s linear infinite}
+  @keyframes lzspin{to{transform:rotate(360deg)}}
+  .lz-err{display:none;background:#ffebee;color:#b71c1c;padding:14px 16px;border-radius:14px;font-weight:600;margin-bottom:16px}
+  .lz-chip{display:inline-block;margin-top:12px;padding:5px 14px;border-radius:20px;background:#e3f2fd;color:#1565c0;font-size:13px;font-weight:700}
+  .lz-plant{margin:8px 0 2px;font-size:28px}
+  .lz-cond{margin:0 0 10px;font-size:20px;font-weight:700}
+  .lz-cond.ok{color:#2e7d32}.lz-cond.bad{color:#c62828}
+  .lz-sev{display:inline-block;margin-left:10px;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700;vertical-align:middle}
+  .lz-sev.none{background:#c8e6c9;color:#1b5e20}.lz-sev.mild{background:#fff9c4;color:#827717}
+  .lz-sev.moderate{background:#ffe0b2;color:#e65100}.lz-sev.severe{background:#ffcdd2;color:#b71c1c}
+  .lz-bar{height:12px;background:#e0e0e0;border-radius:10px;overflow:hidden;margin:14px 0 4px}
+  .lz-bar b{display:block;height:100%;width:0;background:linear-gradient(90deg,#42a5f5,#1565c0);border-radius:10px;transition:width 1.2s}
+  .lz-seen{margin:12px 0 0;line-height:1.6;color:#334}
+  .lz-tip{padding:14px 16px;border-radius:16px;border-left:6px solid;margin-bottom:12px;animation:lzin .5s both}
+  .lz-tip h4{margin:0 0 8px;font-size:16px}
+  .lz-tip ul{margin:0;padding-left:20px;line-height:1.6}
+  .lz-tip.o{background:#e8f5e9;border-color:#43a047}.lz-tip.c{background:#fff3e0;border-color:#fb8c00}
+  .lz-tip.p{background:#f3e5f5;border-color:#8e24aa}.lz-tip.e{background:#e3f2fd;border-color:#1e88e5}
+  @keyframes lzin{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+  .lz-act{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .lz-act button{margin:0}
+  .lz-note{background:#fff8e1;color:#7a5b00;padding:12px 14px;border-radius:14px;font-size:13px;line-height:1.5}
+</style>
+
+<section class="lz-hero">
+  <div class="lz-hero-inner">
+    <h1><i class="fa-solid fa-eye"></i> {{ t.title }}</h1>
+    <p>{{ t.sub }}</p>
+  </div>
+</section>
+
+<main class="lz-wrap">
+  <section class="card">
+    <form id="lzForm">
+      <label class="lz-drop" for="lzFile">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span id="lzName">{{ t.choose }}</span>
+      </label>
+      <input type="file" id="lzFile" name="leaf" accept="image/*" style="display:none">
+      <img id="lzPrev" class="lz-prev" alt="">
+      <button type="submit" id="lzBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ t.check }}</button>
+    </form>
+  </section>
+
+  <div class="lz-load" id="lzLoad"><div class="lz-spin"></div><b>{{ t.working }}</b></div>
+  <div class="lz-err" id="lzErr"></div>
+  <div id="lzOut"></div>
+  <div class="lz-note">{{ t.notice }}</div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const LT = {{ t|tojson }};
+  const sevLabel = {none: LT.sev_none, mild: LT.sev_mild, moderate: LT.sev_moderate, severe: LT.sev_severe};
+
+  const lzFile = document.getElementById("lzFile");
+  const lzPrev = document.getElementById("lzPrev");
+  const lzForm = document.getElementById("lzForm");
+  const lzBtn = document.getElementById("lzBtn");
+  const lzLoad = document.getElementById("lzLoad");
+  const lzErr = document.getElementById("lzErr");
+  const lzOut = document.getElementById("lzOut");
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  lzFile.addEventListener("change", () => {
+    const f = lzFile.files[0];
+    if (!f) return;
+    document.getElementById("lzName").textContent = f.name;
+    lzPrev.src = URL.createObjectURL(f);
+    lzPrev.style.display = "block";
+  });
+
+  function showError(msg) {
+    lzErr.textContent = msg;
+    lzErr.style.display = "block";
+  }
+
+  function tipCard(cls, icon, title, items) {
+    if (!items || !items.length) return null;
+    const box = el("div", "lz-tip " + cls);
+    const h = el("h4");
+    h.innerHTML = '<i class="fa-solid ' + icon + '"></i> ';
+    h.append(title);
+    box.append(h);
+    const ul = el("ul");
+    items.forEach(x => ul.append(el("li", "", x)));
+    box.append(ul);
+    return box;
+  }
+
+  function speechText(d) {
+    return [d.plant_name, d.condition, d.what_i_see]
+      .concat(d.organic_treatment || [], d.chemical_treatment || [], d.prevention || [], d.extra_advice || [])
+      .filter(Boolean).join(". ");
+  }
+
+  function showResult(d, imgSrc) {
+    const head = el("section", "card");
+    const im = el("img", "lz-prev");
+    im.src = imgSrc;
+    im.style.display = "block";
+    head.append(im);
+    head.append(el("span", "lz-chip", d.plant_part || LT.plant));
+    head.append(el("h2", "lz-plant", d.plant_name || "?"));
+    const cond = el("p", "lz-cond " + (d.severity_level === "none" ? "ok" : "bad"), d.condition || "");
+    cond.append(el("span", "lz-sev " + d.severity_level, sevLabel[d.severity_level]));
+    head.append(cond);
+    const bar = el("div", "lz-bar");
+    const fill = el("b");
+    bar.append(fill);
+    head.append(bar);
+    head.append(el("small", "", LT.confidence + ": " + d.confidence + "%"));
+    if (d.what_i_see) head.append(el("p", "lz-seen", d.what_i_see));
+    lzOut.append(head);
+    setTimeout(() => { fill.style.width = d.confidence + "%"; }, 100);
+
+    const adv = el("section", "card");
+    [
+      ["o", "fa-leaf", LT.organic, d.organic_treatment],
+      ["c", "fa-flask", LT.chemical, d.chemical_treatment],
+      ["p", "fa-shield-halved", LT.prevention, d.prevention],
+      ["e", "fa-lightbulb", LT.tips, d.extra_advice],
+    ].forEach(x => {
+      const c = tipCard(x[0], x[1], x[2], x[3]);
+      if (c) adv.append(c);
+    });
+    lzOut.append(adv);
+
+    const act = el("section", "card");
+    const row = el("div", "lz-act");
+    const b1 = el("button");
+    b1.type = "button";
+    b1.innerHTML = '<i class="fa-solid fa-volume-high"></i> ';
+    b1.append(LT.listen);
+    const b2 = el("button", "stop");
+    b2.type = "button";
+    b2.innerHTML = '<i class="fa-solid fa-stop"></i> ';
+    b2.append(LT.stop);
+    row.append(b1, b2);
+    act.append(row);
+    const audio = el("audio");
+    audio.controls = true;
+    act.append(audio);
+    const again = el("a", "btn-link");
+    again.href = "/lens";
+    again.innerHTML = '<i class="fa-solid fa-eye"></i> ';
+    again.append(LT.again);
+    again.style.marginTop = "12px";
+    act.append(again);
+    lzOut.append(act);
+
+    b1.addEventListener("click", async () => {
+      const r = await fetch("/speak", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: speechText(d), lang: LANG})
+      });
+      const blob = await r.blob();
+      audio.src = URL.createObjectURL(blob);
+      audio.play();
+    });
+    b2.addEventListener("click", () => { audio.pause(); audio.currentTime = 0; });
+  }
+
+  lzForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!lzFile.files.length) { lzFile.click(); return; }
+    lzErr.style.display = "none";
+    lzOut.innerHTML = "";
+    lzLoad.style.display = "block";
+    lzBtn.disabled = true;
+    try {
+      const r = await fetch("/lens/scan", { method: "POST", body: new FormData(lzForm) });
+      const d = await r.json();
+      if (!r.ok || d.error) showError(d.error || LT.fail);
+      else showResult(d, lzPrev.src);
+    } catch (x) {
+      showError(LT.fail);
+    }
+    lzLoad.style.display = "none";
+    lzBtn.disabled = false;
+  });
+</script>
+{% endblock %}
