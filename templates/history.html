@@ -2,6 +2,19 @@
 {% block title %}History - Crop Doctor{% endblock %}
 
 {% block content %}
+<style>
+  .hwrap { position: relative; }
+  .hwrap > .hcard { height: 100%; }
+  .hdel { position: absolute; top: 10px; right: 10px; margin: 0; z-index: 3; }
+  .hdel button {
+    width: 34px; height: 34px; margin: 0; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; font-size: 14px;
+    background: white; color: #c62828; border: 1px solid #ef9a9a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: 0.2s;
+  }
+  .hdel button:hover { background: #c62828; color: white; transform: none; }
+</style>
+
 <main class="wrap">
   <div class="lib-head">
     <h2 class="page-title"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="nav_history">History</span></h2>
@@ -15,18 +28,23 @@
   {% if items %}
   <div class="hist-grid">
     {% for it in items %}
-    <a class="hcard" href="{{ url_for('result', scan_id=it.id) }}">
-      <img src="{{ url_for('static', filename='uploads/' + it.image) }}" alt="">
-      <div class="hinfo">
-        <small class="hcrop"><i class="fa-solid fa-seedling"></i> {{ it.crop or '-' }}</small>
-        <b class="hdis">{{ it.disease }}</b>
-        <div class="hmeta">
-          <span class="mini {{ 'ok' if it.healthy else 'bad' }}" data-i18n="{{ 'healthy' if it.healthy else 'disease' }}">{{ 'Healthy' if it.healthy else 'Disease detected' }}</span>
-          <span>{{ it.confidence }}%</span>
+    <div class="hwrap">
+      <a class="hcard" href="{{ url_for('result', scan_id=it.id) }}">
+        <img src="{{ url_for('static', filename='uploads/' + it.image) }}" alt="">
+        <div class="hinfo">
+          <small class="hcrop"><i class="fa-solid fa-seedling"></i> {{ it.crop or '-' }}</small>
+          <b class="hdis">{{ it.disease }}</b>
+          <div class="hmeta">
+            <span class="mini {{ 'ok' if it.healthy else 'bad' }}" data-i18n="{{ 'healthy' if it.healthy else 'disease' }}">{{ 'Healthy' if it.healthy else 'Disease detected' }}</span>
+            <span>{{ it.confidence }}%</span>
+          </div>
+          <small class="hdate">{{ it.created }}</small>
         </div>
-        <small class="hdate">{{ it.created }}</small>
-      </div>
-    </a>
+      </a>
+      <form class="hdel" method="POST" action="/history/delete/{{ it.id }}" onsubmit="return askDelete()">
+        <button type="submit" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </form>
+    </div>
     {% endfor %}
   </div>
   {% else %}
@@ -36,4 +54,19 @@
   </div>
   {% endif %}
 </main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function askDelete() {
+    const words = {
+      en: "Delete this scan?",
+      kn: "ಈ ಸ್ಕ್ಯಾನ್ ಅಳಿಸಬೇಕೆ?",
+      hi: "यह स्कैन मिटाएं?",
+      te: "ఈ స్కాన్‌ను తొలగించాలా?",
+      ta: "இந்த ஸ்கேனை அழிக்கவா?"
+    };
+    return confirm(words[LANG] || words.en);
+  }
+</script>
 {% endblock %}

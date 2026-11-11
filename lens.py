@@ -204,6 +204,19 @@ def clean_result(d):
     }
 
 
+def save_ai(scan_id, r):
+    """Save the AI answer on the scan, so History shows the same crop, disease and confidence."""
+    healthy = 1 if r["severity_level"] == "none" else 0
+    try:
+        with sqlite3.connect(DB) as con:
+            con.execute(
+                "UPDATE scans SET crop = ?, disease = ?, confidence = ?, healthy = ? WHERE id = ?",
+                (r["plant_name"], r["condition"], float(r["confidence"]), healthy, scan_id),
+            )
+    except Exception as e:
+        print("LENS: could not save AI result:", e)
+
+
 @lens_bp.app_context_processor
 def inject_lens_texts():
     return {"lensx": TEXTS[get_lang()]}
@@ -212,6 +225,32 @@ def inject_lens_texts():
 @lens_bp.route("/lens")
 def lens_page():
     return redirect(url_for("scan"))
+
+
+@lens_bp.route("/history/delete/<int:scan_id>", methods=["POST"])
+def delete_scan(scan_id):
+    image = None
+    left = 0
+    try:
+        with sqlite3.connect(DB) as con:
+            row = con.execute("SELECT image FROM scans WHERE id = ?", (scan_id,)).fetchone()
+            if row:
+                image = row[0]
+            con.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
+            if image:
+                left = con.execute("SELECT COUNT(*) FROM scans WHERE image = ?", (image,)).fetchone()[0]
+    except Exception as e:
+        print("LENS: delete failed:", e)
+        return redirect(url_for("history"))
+
+    if image and left == 0:
+        try:
+            os.remove(os.path.join(UPLOADS, os.path.basename(image)))
+        except OSError:
+            pass
+    for k in [k for k in CACHE if k[0] == scan_id]:
+        CACHE.pop(k, None)
+    return redirect(url_for("history"))
 
 
 @lens_bp.route("/lens/analyze/<int:scan_id>")
@@ -267,4 +306,5 @@ def lens_analyze(scan_id):
 
     result = clean_result(data)
     CACHE[key] = result
+    save_ai(scan_id, result)
     return jsonify(result)

@@ -3,6 +3,8 @@
 
 {% block content %}
 <style>
+  audio { display: none !important; }
+
   .res-hero { position: relative; overflow: hidden; color: white; }
   .res-hero.bad { background: linear-gradient(135deg, #b71c1c 0%, #e53935 55%, #ff7043 100%); }
   .res-hero.ok { background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 55%, #43a047 100%); }
@@ -19,19 +21,16 @@
   .wrap.result2 { max-width: 1100px; margin: -30px auto 40px; padding: 0 14px; position: relative; z-index: 2; display: grid; gap: 16px; }
   .wrap.result2 .card { margin-bottom: 0; }
 
-  /* photo + summary */
   .sum { display: grid; gap: 18px; }
   .photo { overflow: hidden; border-radius: 16px; }
   .photo img { display: block; width: 100%; height: 100%; max-height: 300px; object-fit: cover; }
   @media (min-width: 760px) { .sum { grid-template-columns: 320px 1fr; align-items: center; } }
 
-  /* old library result: hidden unless the AI fails */
-  .gauge-row, .warn, .old-advice { display: none; }
+  /* library result: shown only if the AI fails */
+  .gauge-row { display: none; align-items: center; gap: 18px; margin-top: 4px; }
+  .warn { display: none; }
   body.ai-failed .gauge-row { display: flex; }
   body.ai-failed .warn { display: block; }
-  body.ai-failed .old-advice { display: block; }
-
-  .gauge-row { align-items: center; gap: 18px; margin-top: 4px; }
   .gauge { position: relative; width: 130px; height: 130px; flex: 0 0 130px; }
   .gauge svg { width: 100%; height: 100%; }
   .g-bg { fill: none; stroke: #e8f0e8; stroke-width: 10; }
@@ -50,28 +49,12 @@
   .opt-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: #445; }
   .opt-bar { height: 8px; margin-top: 4px; background: #e8f0e8; border-radius: 8px; overflow: hidden; }
   .opt-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #90a4ae, #607d8b); border-radius: 8px; transition: width 1.2s ease; }
-  .stag { opacity: 0; animation: slideIn 0.6s forwards; animation-delay: var(--d, 0s); }
-  @keyframes slideIn { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
-
-  /* buttons */
-  .act { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-  .act button, .act a {
-    margin: 0; width: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 13px; font-size: 15px; font-weight: 600; font-family: inherit;
-    border-radius: 14px; text-decoration: none; cursor: pointer; border: none; transition: 0.25s;
-  }
-  .act .b-print { background: white; color: #2e7d32; border: 2px solid #c8e6c9; box-shadow: none; }
-  .act .b-print:hover { background: #e8f5e9; }
-  .act a.b-scan { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; }
-  .act a.b-scan:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(21, 101, 192, 0.4); }
-  .act4 { margin-top: 0; }
-  @media (min-width: 760px) { .act4 { grid-template-columns: repeat(4, 1fr); } }
 
   /* AI summary */
   .ai-load { text-align: center; padding: 22px 10px; color: #2e7d32; font-weight: 600; }
   .ai-spin { width: 42px; height: 42px; margin: 0 auto 12px; border: 5px solid #c8e6c9; border-top-color: #2e7d32; border-radius: 50%; animation: aispin 1s linear infinite; }
   @keyframes aispin { to { transform: rotate(360deg); } }
-  .ai-err { display: none; background: #ffebee; color: #b71c1c; padding: 12px 14px; border-radius: 14px; font-weight: 600; }
+  .ai-err { display: none; background: #ffebee; color: #b71c1c; padding: 12px 14px; border-radius: 14px; font-weight: 600; margin-bottom: 12px; }
   button.ai-retry { width: auto; margin: 10px 0 0; padding: 10px 18px; font-size: 14px; background: white; color: #b71c1c; border: 1px solid #ef9a9a; box-shadow: none; }
   button.ai-retry:hover { background: #ffebee; transform: none; box-shadow: none; }
   .ai-chip { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px 14px; border-radius: 20px; background: #e8f5e9; color: #2e7d32; font-size: 13px; font-weight: 700; }
@@ -86,18 +69,50 @@
   .ai-conf { color: #556; font-size: 13px; font-weight: 600; }
   .ai-seen { margin: 12px 0 0; line-height: 1.6; color: #334; }
 
-  /* advice grid */
+  /* advice boxes (AI result or library fallback) */
   .ai-grid { display: grid; gap: 14px; }
   @media (min-width: 760px) { .ai-grid { grid-template-columns: 1fr 1fr; } }
   .ai-tip { padding: 16px 18px; border-radius: 18px; border-top: 5px solid; box-shadow: 0 4px 14px rgba(0,0,0,0.06); animation: slideIn 0.5s both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(46px); } to { opacity: 1; transform: none; } }
   .ai-tip h4 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: center; gap: 10px; }
   .ai-tip h4 i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: white; font-size: 14px; }
   .ai-tip ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+  .ai-tip p { margin: 0; line-height: 1.6; }
   .ai-tip.o { background: #f1f8f1; border-color: #43a047; } .ai-tip.o h4 i { background: #43a047; }
   .ai-tip.c { background: #fff7ec; border-color: #fb8c00; } .ai-tip.c h4 i { background: #fb8c00; }
   .ai-tip.p { background: #f8eefa; border-color: #8e24aa; } .ai-tip.p h4 i { background: #8e24aa; }
   .ai-tip.e { background: #eef6fd; border-color: #1e88e5; } .ai-tip.e h4 i { background: #1e88e5; }
-  .ai-note { display: none; background: #fff8e1; color: #7a5b00; padding: 12px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
+  .old-advice { display: none; }
+  body.ai-failed .old-advice { display: grid; }
+  .ai-note { background: #fff8e1; color: #7a5b00; padding: 12px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
+
+  /* buttons */
+  .act { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .act button, .act a {
+    margin: 0; width: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px; font-size: 15px; font-weight: 600; font-family: inherit;
+    border-radius: 14px; text-decoration: none; cursor: pointer; border: none; transition: 0.25s;
+  }
+  .act .b-print { background: white; color: #2e7d32; border: 2px solid #c8e6c9; box-shadow: none; }
+  .act .b-print:hover { background: #e8f5e9; }
+  .act a.b-scan { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; }
+  .act a.b-scan:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(21, 101, 192, 0.4); }
+  @media (min-width: 760px) { .act { grid-template-columns: repeat(4, 1fr); } }
+
+  /* voice note */
+  .vnote { display: flex; align-items: center; gap: 14px; background: white; border: 1px solid #c8e6c9; border-radius: 40px; padding: 10px 18px 10px 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+  button.vn-btn {
+    flex: 0 0 48px; width: 48px; height: 48px; margin: 0; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; font-size: 18px; color: white; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #2e7d32, #43a047); box-shadow: 0 4px 10px rgba(46,125,50,0.35);
+  }
+  button.vn-btn:hover { transform: none; }
+  .vn-wave { flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+  .vn-wave i { flex: 1; min-width: 2px; border-radius: 3px; background: #cfd8cf; transition: background 0.2s; }
+  .vn-wave i.on { background: #2e7d32; }
+  .vnote.playing .vn-wave i.on { animation: vnbar 0.7s ease-in-out infinite alternate; }
+  @keyframes vnbar { from { transform: scaleY(1); } to { transform: scaleY(0.55); } }
+  .vn-time { flex: 0 0 auto; min-width: 84px; text-align: right; font-size: 13px; font-weight: 700; color: #2e7d32; font-variant-numeric: tabular-nums; }
 
   @media (min-width: 900px) {
     .res-hero-inner { padding: 44px 48px 78px; }
@@ -105,7 +120,7 @@
     .wrap.result2 { padding: 0 32px; margin-top: -46px; }
   }
   @media print {
-    .appbar, .tabbar, .footer, .act, audio { display: none !important; }
+    .appbar, .tabbar, .footer, .act, .vnote { display: none !important; }
     .wrap.result2 { margin-top: 0; }
   }
 </style>
@@ -163,46 +178,215 @@
   </section>
 
   <div id="aiAdvice"></div>
+
+  <div class="ai-grid old-advice">
+    <div class="ai-tip e"><h4><i class="fa-solid fa-circle-info"></i><span>{{ labels[0] }}</span></h4><p>{{ info.about }}</p></div>
+    <div class="ai-tip o"><h4><i class="fa-solid fa-leaf"></i><span>{{ labels[1] }}</span></h4><p>{{ info.organic }}</p></div>
+    <div class="ai-tip c"><h4><i class="fa-solid fa-flask"></i><span>{{ labels[2] }}</span></h4><p>{{ info.chemical }}</p></div>
+    <div class="ai-tip p"><h4><i class="fa-solid fa-shield-halved"></i><span>{{ labels[3] }}</span></h4><p>{{ info.prevention }}</p></div>
+  </div>
+
+  <div class="act">
+    <button type="button" onclick="speak()"><i class="fa-solid fa-volume-high"></i> <span data-i18n="listen">Listen</span></button>
+    <button type="button" class="stop" onclick="stopSpeak()"><i class="fa-solid fa-stop"></i> <span data-i18n="stop">Stop</span></button>
+    <button type="button" class="b-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+    <a class="b-scan" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="scan_again">Scan another leaf</span></a>
+  </div>
+
+  <div class="vnote" id="vnote">
+    <button type="button" class="vn-btn" id="vnBtn" onclick="toggleVoice()"><i class="fa-solid fa-play" id="vnIcon"></i></button>
+    <div class="vn-wave" id="vnWave"></div>
+    <span class="vn-time" id="vnTime">0:00</span>
+  </div>
+
   {% if lensx is defined %}
   <div class="ai-note" id="aiNote">{{ lensx.notice }}</div>
   {% endif %}
-
-  <section class="card old-advice">
-    <h2><i class="fa-solid fa-lightbulb"></i> <span data-i18n="advice">Advice</span></h2>
-    <div class="tips">
-      <div class="tip t1 stag" style="--d:.2s"><h4><i class="fa-solid fa-circle-info"></i> {{ labels[0] }}</h4><p>{{ info.about }}</p></div>
-      <div class="tip t2 stag" style="--d:.4s"><h4><i class="fa-solid fa-leaf"></i> {{ labels[1] }}</h4><p>{{ info.organic }}</p></div>
-      <div class="tip t3 stag" style="--d:.6s"><h4><i class="fa-solid fa-flask"></i> {{ labels[2] }}</h4><p>{{ info.chemical }}</p></div>
-      <div class="tip t4 stag" style="--d:.8s"><h4><i class="fa-solid fa-shield-halved"></i> {{ labels[3] }}</h4><p>{{ info.prevention }}</p></div>
-    </div>
-    <div class="act">
-      <button type="button" onclick="speak()"><i class="fa-solid fa-volume-high"></i> <span data-i18n="listen">Listen</span></button>
-      <button type="button" class="stop" onclick="stopSpeak()"><i class="fa-solid fa-stop"></i> <span data-i18n="stop">Stop</span></button>
-      <button type="button" class="b-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-      <a class="b-scan" href="/scan"><i class="fa-solid fa-camera"></i> <span data-i18n="scan_again">Scan another leaf</span></a>
-    </div>
-    <audio id="player" controls></audio>
-  </section>
 </main>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  function stopSpeak() {
-    const p = document.getElementById("player");
-    p.pause();
-    p.currentTime = 0;
+  const voice = new Audio();
+  let voiceUrl = null;
+  let voiceKey = "";
+  let voiceBusy = false;
+  const vnote = document.getElementById("vnote");
+  const vnIcon = document.getElementById("vnIcon");
+  const vnTime = document.getElementById("vnTime");
+  const vnWave = document.getElementById("vnWave");
+
+  /* build the wave bars */
+  const BARS = 44;
+  for (let i = 0; i < BARS; i++) {
+    const b = document.createElement("i");
+    const h = 22 + 70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.55));
+    b.style.height = h + "%";
+    b.style.animationDelay = ((i % 6) * 0.09) + "s";
+    vnWave.append(b);
   }
-  async function speak() {
-    const r = await fetch("/speak", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({text: {{ speech|tojson }}, lang: LANG})
+  const bars = Array.from(vnWave.children);
+
+  function fmt(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  function showTime() {
+    const cur = voice.currentTime || 0;
+    const tot = voice.duration;
+    vnTime.textContent = isFinite(tot) && tot > 0 ? fmt(cur) + " / " + fmt(tot) : fmt(cur);
+  }
+
+  function showProgress() {
+    const tot = voice.duration;
+    const ratio = isFinite(tot) && tot > 0 ? voice.currentTime / tot : 0;
+    const upto = Math.round(ratio * BARS);
+    bars.forEach((b, i) => b.classList.toggle("on", i < upto));
+    showTime();
+  }
+
+  function setIcon(name) {
+    vnIcon.className = "fa-solid " + name;
+  }
+
+  voice.addEventListener("timeupdate", showProgress);
+  voice.addEventListener("loadedmetadata", showProgress);
+  voice.addEventListener("play", () => { vnote.classList.add("playing"); setIcon("fa-pause"); });
+  voice.addEventListener("pause", () => { vnote.classList.remove("playing"); setIcon("fa-play"); });
+  voice.addEventListener("ended", () => {
+    vnote.classList.remove("playing");
+    setIcon("fa-play");
+    voice.currentTime = 0;
+    showProgress();
+  });
+
+  vnWave.addEventListener("click", e => {
+    if (!voiceUrl || !isFinite(voice.duration)) return;
+    const rect = vnWave.getBoundingClientRect();
+    voice.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * voice.duration;
+    showProgress();
+  });
+
+  function clean(t) {
+    return (t || "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
+  }
+
+  /* the same words that are shown on the page: top line, then each box with its heading */
+  function buildText() {
+    const failed = document.body.classList.contains("ai-failed");
+    const spoken = new Set();
+    const chunks = [];
+
+    function add(parts) {
+      const keep = [];
+      parts.forEach(p => {
+        const c = clean(p);
+        const key = c.toLowerCase();
+        if (c && !spoken.has(key)) {
+          spoken.add(key);
+          keep.push(c);
+        }
+      });
+      if (keep.length) chunks.push(keep.join(". ") + ".");
+    }
+
+    const top = [
+      document.getElementById("heroCrop").textContent,
+      document.getElementById("heroTitle").textContent,
+      document.getElementById("heroBadge").textContent
+    ];
+    if (!failed) {
+      const seen = document.querySelector("#aiSummary .ai-seen");
+      if (seen) top.push(seen.textContent);
+    }
+    add(top);
+
+    const boxes = failed
+      ? document.querySelectorAll(".old-advice .ai-tip")
+      : document.querySelectorAll("#aiAdvice .ai-tip");
+    boxes.forEach(b => {
+      const head = b.querySelector("h4 span");
+      const items = Array.from(b.querySelectorAll("li, p")).map(x => x.textContent);
+      add([head ? head.textContent : ""].concat(items));
     });
-    const blob = await r.blob();
-    const player = document.getElementById("player");
-    player.src = URL.createObjectURL(blob);
-    player.play();
+    return chunks.join(" ");
+  }
+
+  function aiStillWorking() {
+    const box = document.getElementById("aiLoad");
+    return box && box.style.display !== "none" && !document.body.classList.contains("ai-failed");
+  }
+
+  async function ensureAudio() {
+    const text = buildText();
+    if (voiceUrl && text === voiceKey) return true;
+    voiceBusy = true;
+    setIcon("fa-spinner fa-spin");
+    try {
+      const r = await fetch("/speak", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: text, lang: LANG})
+      });
+      if (!r.ok) throw new Error("speak failed");
+      voice.pause();
+      voiceUrl = URL.createObjectURL(await r.blob());
+      voiceKey = text;
+      voice.src = voiceUrl;
+      voice.load();
+      return true;
+    } catch (e) {
+      console.log("Voice error:", e);
+      vnTime.textContent = "Voice error";
+      return false;
+    } finally {
+      voiceBusy = false;
+      setIcon(voice.paused ? "fa-play" : "fa-pause");
+    }
+  }
+
+  async function toggleVoice() {
+    if (voiceBusy) return;
+    if (aiStillWorking()) {
+      vnTime.textContent = "Please wait...";
+      setTimeout(showTime, 1500);
+      return;
+    }
+    if (!voice.paused) {
+      voice.pause();
+      return;
+    }
+    if (await ensureAudio()) voice.play();
+  }
+
+  async function speak() {
+    if (voiceBusy) return;
+    if (aiStillWorking()) {
+      vnTime.textContent = "Please wait...";
+      setTimeout(showTime, 1500);
+      return;
+    }
+    voice.pause();
+    if (await ensureAudio()) {
+      voice.currentTime = 0;
+      voice.play();
+    }
+  }
+
+  function stopSpeak() {
+    voice.pause();
+    voice.currentTime = 0;
+    showProgress();
+  }
+
+  function resetVoice() {
+    stopSpeak();
+    voiceUrl = null;
+    voiceKey = "";
+    vnTime.textContent = "0:00";
   }
 
   const circ = 326.73;
@@ -233,7 +417,6 @@
   const aiErr = document.getElementById("aiErr");
   const aiSummary = document.getElementById("aiSummary");
   const aiAdvice = document.getElementById("aiAdvice");
-  const aiNote = document.getElementById("aiNote");
 
   function el(tag, cls, text) {
     const e = document.createElement(tag);
@@ -253,12 +436,6 @@
     items.forEach(x => ul.append(el("li", "", x)));
     box.append(ul);
     return box;
-  }
-
-  function speechText(d) {
-    return [d.plant_name, d.condition, d.what_i_see]
-      .concat(d.organic_treatment || [], d.chemical_treatment || [], d.prevention || [], d.extra_advice || [])
-      .filter(Boolean).join(". ");
   }
 
   function updateHero(d) {
@@ -305,40 +482,6 @@
       if (c) grid.append(c);
     });
     aiAdvice.append(grid);
-
-    const audio = new Audio();
-    const row = el("div", "act act4");
-    const b1 = el("button");
-    b1.type = "button";
-    b1.innerHTML = '<i class="fa-solid fa-volume-high"></i> ';
-    b1.append(LT.listen);
-    const b2 = el("button", "stop");
-    b2.type = "button";
-    b2.innerHTML = '<i class="fa-solid fa-stop"></i> ';
-    b2.append(LT.stop);
-    const pr = el("button", "b-print");
-    pr.type = "button";
-    pr.innerHTML = '<i class="fa-solid fa-print"></i> Print';
-    const sc = el("a", "b-scan");
-    sc.href = "/scan";
-    sc.innerHTML = '<i class="fa-solid fa-camera"></i> Scan another leaf';
-    row.append(b1, b2, pr, sc);
-    aiAdvice.append(row);
-
-    b1.addEventListener("click", async () => {
-      const r = await fetch("/speak", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text: speechText(d), lang: LANG})
-      });
-      const blob = await r.blob();
-      audio.src = URL.createObjectURL(blob);
-      audio.play();
-    });
-    b2.addEventListener("click", () => { audio.pause(); audio.currentTime = 0; });
-    pr.addEventListener("click", () => window.print());
-
-    aiNote.style.display = "block";
   }
 
   function showAIError(msg) {
@@ -355,6 +498,7 @@
   }
 
   async function loadAI() {
+    resetVoice();
     document.body.classList.remove("ai-failed");
     aiErr.style.display = "none";
     aiSummary.innerHTML = "";
