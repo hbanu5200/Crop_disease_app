@@ -207,16 +207,36 @@
 
 {% block scripts %}
 <script>
+  /*
+    Three voices, tried in this order:
+    1) "file"    - mp3 made by our server (fastest, but blocked on some hosts)
+    2) "chain"   - Google's free web voice, played straight from this device
+    3) "browser" - the voice built into the phone or computer
+  */
   const voice = new Audio();
-  let mode = "";              /* "file" = voice from the server, "browser" = built-in voice of the phone or computer */
+  voice.preload = "auto";
+
+  let mode = "";
   let playing = false;
+  let paused = false;
   let prepared = "";
   let fileUrl = null;
   let voiceBusy = false;
-  let serverFailed = false;
 
+  /* remember for 24 hours that the server voice failed, so we skip the slow try */
+  let serverFailed = false;
+  try {
+    const t = parseInt(localStorage.getItem("svf") || "0", 10);
+    if (t && Date.now() - t < 86400000) serverFailed = true;
+  } catch (e) {}
+  let chainFailed = false;
+
+  let elapsed = 0, clock = null;
+
+  /* chain state */
+  let cChunks = [], cIndex = 0, cDone = 0, cTotal = 1, cToken = 0, cStarted = false;
+  /* built-in voice state */
   let bChunks = [], bIndex = 0, bDone = 0, bTotal = 1, bToken = 0;
-  let bPaused = false, bElapsed = 0, bTimer = null;
 
   const VLANG = {en: "en-IN", hi: "hi-IN", kn: "kn-IN", te: "te-IN", ta: "ta-IN"};
   const vnote = document.getElementById("vnote");
@@ -241,59 +261,106 @@
     const sec = Math.floor(s % 60);
     return m + ":" + (sec < 10 ? "0" : "") + sec;
   }
-
-  function setIcon(name) {
-    vnIcon.className = "fa-solid " + name;
-  }
-
+  function setIcon(name) { vnIcon.className = "fa-solid " + name; }
   function setPlaying(on) {
     playing = on;
     vnote.classList.toggle("playing", on);
     setIcon(on ? "fa-pause" : "fa-play");
   }
-
-  function setRatio(ratio) {
-    const upto = Math.round(Math.max(0, Math.min(1, ratio)) * BARS);
+  function setRatio(r) {
+    const upto = Math.round(Math.max(0, Math.min(1, r)) * BARS);
     bars.forEach((b, i) => b.classList.toggle("on", i < upto));
   }
+  function startClock() {
+    stopClock();
+    clock = setInterval(() => { elapsed++; vnTime.textContent = fmt(elapsed); }, 1000);
+  }
+  function stopClock() {
+    if (clock) clearInterval(clock);
+    clock = null;
+  }
+  function say(msg) {
+    setPlaying(false);
+    stopClock();
+    vnTime.textContent = msg;
+  }
 
-  /* ---- voice from the server (mp3 file) ---- */
-  function showProgress() {
+  function splitChunks(text, max) {
+    const parts = text.match(/[^.!?।]+[.!?।]?/g) || [text];
+    const out = [];
+    let cur = "";
+    parts.forEach(p => {
+      if ((cur + p).length > max && cur) { out.push(cur); cur = p; }
+      else cur += p;
+    });
+    if (cur.trim()) out.push(cur);
+    const small = [];
+    out.map(s => s.trim()).filter(Boolean).forEach(s => {
+      while (s.length > max) { small.push(s.slice(0, max)); s = s.slice(max); }
+      if (s) small.push(s);
+    });
+    return small;
+  }
+
+  /* ---------- voice 1: file from the server ---------- */
+  function showFileProgress() {
     const tot = voice.duration;
     const cur = voice.currentTime || 0;
     setRatio(isFinite(tot) && tot > 0 ? cur / tot : 0);
     vnTime.textContent = isFinite(tot) && tot > 0 ? fmt(cur) + " / " + fmt(tot) : fmt(cur);
   }
-  voice.addEventListener("timeupdate", showProgress);
-  voice.addEventListener("loadedmetadata", showProgress);
-  voice.addEventListener("play", () => setPlaying(true));
-  voice.addEventListener("pause", () => setPlaying(false));
-  voice.addEventListener("ended", () => {
-    setPlaying(false);
-    voice.currentTime = 0;
-    showProgress();
-  });
 
-  vnWave.addEventListener("click", e => {
-    if (mode !== "file" || !isFinite(voice.duration)) return;
-    const rect = vnWave.getBoundingClientRect();
-    voice.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * voice.duration;
-    showProgress();
-  });
-
-  /* ---- built-in voice (used when the server voice does not work) ---- */
-  function splitChunks(text) {
-    const parts = text.match(/[^.!?।]+[.!?।]?/g) || [text];
-    const out = [];
-    let cur = "";
-    parts.forEach(p => {
-      if ((cur + p).length > 180 && cur) { out.push(cur); cur = p; }
-      else cur += p;
-    });
-    if (cur.trim()) out.push(cur);
-    return out.map(s => s.trim()).filter(Boolean);
+  /* ---------- voice 2: Google web voice, chunk by chunk ---------- */
+  function chainUrl(piece) {
+    return "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" +
+      encodeURIComponent(LANG) + "&q=" + encodeURIComponent(piece);
   }
 
+  function playChain(token) {
+    if (token !== cToken) return;
+    if (cIndex >= cChunks.length) {
+      stopClock();
+      setPlaying(false);
+      paused = false;
+      setRatio(1);
+      setTimeout(() => { if (!playing) setRatio(0); }, 800);
+      return;
+    }
+    voice.src = chainUrl(cChunks[cIndex]);
+    const p = voice.play();
+    if (p && p.catch) p.catch(() => chainError(token));
+  }
+
+  function chainError(token) {
+    if (token !== cToken) return;
+    if (!cStarted) {
+      chainFailed = true;
+      const text = prepared;
+      cToken++;
+      startBuiltin(text);
+    } else {
+      cToken++;
+      say("Voice error");
+    }
+  }
+
+  function startChain(text) {
+    mode = "chain";
+    cToken++;
+    cChunks = splitChunks(text, 140);
+    cTotal = cChunks.join("").length || 1;
+    cIndex = 0;
+    cDone = 0;
+    cStarted = false;
+    elapsed = 0;
+    paused = false;
+    vnTime.textContent = "0:00";
+    setPlaying(true);
+    startClock();
+    playChain(cToken);
+  }
+
+  /* ---------- voice 3: built-in voice of the device ---------- */
   function pickVoice(code) {
     const list = window.speechSynthesis.getVoices();
     const want = (VLANG[code] || "en-IN").toLowerCase();
@@ -302,29 +369,16 @@
     return list.find(v => norm(v) === want) || list.find(v => norm(v).startsWith(base));
   }
 
-  function startClock() {
-    stopClock();
-    bTimer = setInterval(() => {
-      bElapsed++;
-      vnTime.textContent = fmt(bElapsed);
-    }, 1000);
-  }
-  function stopClock() {
-    if (bTimer) clearInterval(bTimer);
-    bTimer = null;
-  }
-
-  function finishBrowser() {
-    stopClock();
-    setPlaying(false);
-    bPaused = false;
-    setRatio(1);
-    setTimeout(() => { if (!playing) setRatio(0); }, 800);
-  }
-
-  function speakChunk(token) {
+  function speakBuiltin(token) {
     if (token !== bToken) return;
-    if (bIndex >= bChunks.length) { finishBrowser(); return; }
+    if (bIndex >= bChunks.length) {
+      stopClock();
+      setPlaying(false);
+      paused = false;
+      setRatio(1);
+      setTimeout(() => { if (!playing) setRatio(0); }, 800);
+      return;
+    }
     const piece = bChunks[bIndex];
     const u = new SpeechSynthesisUtterance(piece);
     u.lang = VLANG[LANG] || "en-IN";
@@ -337,60 +391,73 @@
       bDone += piece.length;
       bIndex++;
       setRatio(bDone / bTotal);
-      speakChunk(token);
+      speakBuiltin(token);
     };
     u.onerror = e => {
       if (token !== bToken) return;
       if (e.error === "canceled" || e.error === "interrupted") return;
-      stopAll();
-      vnTime.textContent = "Voice not available";
+      bToken++;
+      say("Voice not available");
     };
     window.speechSynthesis.speak(u);
   }
 
-  function startBrowser(text) {
+  function startBuiltin(text) {
     mode = "browser";
-    if (!("speechSynthesis" in window)) {
-      setPlaying(false);
-      vnTime.textContent = "Voice not available";
-      return;
-    }
+    if (!("speechSynthesis" in window)) { say("Voice not available"); return; }
     const voices = window.speechSynthesis.getVoices();
-    if (LANG !== "en" && voices.length && !pickVoice(LANG)) {
-      setPlaying(false);
-      vnTime.textContent = "Voice not available";
-      return;
-    }
+    if (LANG !== "en" && voices.length && !pickVoice(LANG)) { say("Voice not available"); return; }
     window.speechSynthesis.cancel();
     bToken++;
-    bChunks = splitChunks(text);
+    bChunks = splitChunks(text, 180);
     bTotal = bChunks.join("").length || 1;
     bIndex = 0;
     bDone = 0;
-    bElapsed = 0;
-    bPaused = false;
+    elapsed = 0;
+    paused = false;
     vnTime.textContent = "0:00";
     setPlaying(true);
     startClock();
     const token = bToken;
-    setTimeout(() => speakChunk(token), 120);
+    setTimeout(() => speakBuiltin(token), 120);
   }
 
-  function pauseBrowser() {
-    window.speechSynthesis.pause();
-    bPaused = true;
-    stopClock();
-    setPlaying(false);
-  }
+  /* ---------- audio element events ---------- */
+  voice.addEventListener("loadedmetadata", () => { if (mode === "file") showFileProgress(); });
+  voice.addEventListener("timeupdate", () => {
+    if (mode === "file") showFileProgress();
+    else if (mode === "chain" && cChunks[cIndex]) {
+      const d = voice.duration;
+      const frac = isFinite(d) && d > 0 ? voice.currentTime / d : 0;
+      setRatio((cDone + frac * cChunks[cIndex].length) / cTotal);
+    }
+  });
+  voice.addEventListener("playing", () => { if (mode === "chain") cStarted = true; });
+  voice.addEventListener("play", () => { if (mode === "file") setPlaying(true); });
+  voice.addEventListener("pause", () => { if (mode === "file") setPlaying(false); });
+  voice.addEventListener("ended", () => {
+    if (mode === "file") {
+      setPlaying(false);
+      voice.currentTime = 0;
+      showFileProgress();
+    } else if (mode === "chain") {
+      cDone += (cChunks[cIndex] || "").length;
+      cIndex++;
+      playChain(cToken);
+    }
+  });
+  voice.addEventListener("error", () => {
+    if (mode === "chain") chainError(cToken);
+  });
 
-  function resumeBrowser() {
-    bPaused = false;
-    window.speechSynthesis.resume();
-    setPlaying(true);
-    startClock();
-  }
+  vnWave.addEventListener("click", e => {
+    if (mode !== "file" || !isFinite(voice.duration)) return;
+    const rect = vnWave.getBoundingClientRect();
+    voice.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * voice.duration;
+    showFileProgress();
+  });
 
-  /* ---- shared ---- */
+  /* ---------- shared ---------- */
   function clean(t) {
     return (t || "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
   }
@@ -444,18 +511,19 @@
   function waitMsg() {
     vnTime.textContent = "Please wait...";
     setTimeout(() => {
-      vnTime.textContent = fmt(mode === "browser" ? bElapsed : voice.currentTime);
+      vnTime.textContent = mode === "file" ? fmt(voice.currentTime) : fmt(elapsed);
     }, 1500);
   }
 
   function stopAll() {
+    cToken++;
     bToken++;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     stopClock();
-    bPaused = false;
-    bElapsed = 0;
-    bIndex = 0;
-    bDone = 0;
+    paused = false;
+    elapsed = 0;
+    cIndex = 0; cDone = 0;
+    bIndex = 0; bDone = 0;
     try { voice.pause(); voice.currentTime = 0; } catch (e) {}
     setPlaying(false);
     setRatio(0);
@@ -465,12 +533,10 @@
   async function begin() {
     const text = buildText();
     if (mode === "file" && fileUrl && prepared === text) { voice.play(); return; }
-    if (mode === "browser" && prepared === text && bPaused) { resumeBrowser(); return; }
 
     stopAll();
     prepared = text;
 
-    let ok = false;
     if (!serverFailed) {
       voiceBusy = true;
       setIcon("fa-spinner fa-spin");
@@ -488,22 +554,19 @@
         voice.src = fileUrl;
         voice.load();
         mode = "file";
-        ok = true;
+        voiceBusy = false;
+        voice.play().catch(() => say("Tap play"));
+        return;
       } catch (e) {
-        console.log("Server voice failed, using the built-in voice:", e);
+        console.log("Server voice failed:", e);
         serverFailed = true;
+        try { localStorage.setItem("svf", String(Date.now())); } catch (e2) {}
       }
       voiceBusy = false;
     }
 
-    if (ok) {
-      voice.play().catch(() => {
-        setPlaying(false);
-        vnTime.textContent = "Tap play";
-      });
-    } else {
-      startBrowser(text);
-    }
+    if (!chainFailed) startChain(text);
+    else startBuiltin(text);
   }
 
   async function toggleVoice() {
@@ -511,8 +574,14 @@
     if (aiStillWorking()) { waitMsg(); return; }
     if (playing) {
       if (mode === "file") voice.pause();
-      else if (mode === "browser") pauseBrowser();
+      else if (mode === "chain") { voice.pause(); paused = true; stopClock(); setPlaying(false); }
+      else if (mode === "browser") { window.speechSynthesis.pause(); paused = true; stopClock(); setPlaying(false); }
       return;
+    }
+    if (paused && prepared === buildText()) {
+      paused = false;
+      if (mode === "chain") { voice.play(); setPlaying(true); startClock(); return; }
+      if (mode === "browser") { window.speechSynthesis.resume(); setPlaying(true); startClock(); return; }
     }
     await begin();
   }
@@ -520,14 +589,15 @@
   async function speak() {
     if (voiceBusy) return;
     if (aiStillWorking()) { waitMsg(); return; }
-    if (mode === "file") voice.currentTime = 0;
-    if (mode === "browser") bPaused = false;
+    if (mode === "file" && fileUrl && prepared === buildText()) {
+      voice.currentTime = 0;
+      voice.play();
+      return;
+    }
     await begin();
   }
 
-  function stopSpeak() {
-    stopAll();
-  }
+  function stopSpeak() { stopAll(); }
 
   function resetVoice() {
     stopAll();
