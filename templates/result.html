@@ -208,15 +208,23 @@
 {% block scripts %}
 <script>
   const voice = new Audio();
-  let voiceUrl = null;
-  let voiceKey = "";
+  let mode = "";              /* "file" = voice from the server, "browser" = built-in voice of the phone or computer */
+  let playing = false;
+  let prepared = "";
+  let fileUrl = null;
   let voiceBusy = false;
+  let serverFailed = false;
+
+  let bChunks = [], bIndex = 0, bDone = 0, bTotal = 1, bToken = 0;
+  let bPaused = false, bElapsed = 0, bTimer = null;
+
+  const VLANG = {en: "en-IN", hi: "hi-IN", kn: "kn-IN", te: "te-IN", ta: "ta-IN"};
   const vnote = document.getElementById("vnote");
   const vnIcon = document.getElementById("vnIcon");
   const vnTime = document.getElementById("vnTime");
   const vnWave = document.getElementById("vnWave");
 
-  /* build the wave bars */
+  /* wave bars */
   const BARS = 44;
   for (let i = 0; i < BARS; i++) {
     const b = document.createElement("i");
@@ -234,42 +242,155 @@
     return m + ":" + (sec < 10 ? "0" : "") + sec;
   }
 
-  function showTime() {
-    const cur = voice.currentTime || 0;
-    const tot = voice.duration;
-    vnTime.textContent = isFinite(tot) && tot > 0 ? fmt(cur) + " / " + fmt(tot) : fmt(cur);
-  }
-
-  function showProgress() {
-    const tot = voice.duration;
-    const ratio = isFinite(tot) && tot > 0 ? voice.currentTime / tot : 0;
-    const upto = Math.round(ratio * BARS);
-    bars.forEach((b, i) => b.classList.toggle("on", i < upto));
-    showTime();
-  }
-
   function setIcon(name) {
     vnIcon.className = "fa-solid " + name;
   }
 
+  function setPlaying(on) {
+    playing = on;
+    vnote.classList.toggle("playing", on);
+    setIcon(on ? "fa-pause" : "fa-play");
+  }
+
+  function setRatio(ratio) {
+    const upto = Math.round(Math.max(0, Math.min(1, ratio)) * BARS);
+    bars.forEach((b, i) => b.classList.toggle("on", i < upto));
+  }
+
+  /* ---- voice from the server (mp3 file) ---- */
+  function showProgress() {
+    const tot = voice.duration;
+    const cur = voice.currentTime || 0;
+    setRatio(isFinite(tot) && tot > 0 ? cur / tot : 0);
+    vnTime.textContent = isFinite(tot) && tot > 0 ? fmt(cur) + " / " + fmt(tot) : fmt(cur);
+  }
   voice.addEventListener("timeupdate", showProgress);
   voice.addEventListener("loadedmetadata", showProgress);
-  voice.addEventListener("play", () => { vnote.classList.add("playing"); setIcon("fa-pause"); });
-  voice.addEventListener("pause", () => { vnote.classList.remove("playing"); setIcon("fa-play"); });
+  voice.addEventListener("play", () => setPlaying(true));
+  voice.addEventListener("pause", () => setPlaying(false));
   voice.addEventListener("ended", () => {
-    vnote.classList.remove("playing");
-    setIcon("fa-play");
+    setPlaying(false);
     voice.currentTime = 0;
     showProgress();
   });
 
   vnWave.addEventListener("click", e => {
-    if (!voiceUrl || !isFinite(voice.duration)) return;
+    if (mode !== "file" || !isFinite(voice.duration)) return;
     const rect = vnWave.getBoundingClientRect();
     voice.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * voice.duration;
     showProgress();
   });
 
+  /* ---- built-in voice (used when the server voice does not work) ---- */
+  function splitChunks(text) {
+    const parts = text.match(/[^.!?।]+[.!?।]?/g) || [text];
+    const out = [];
+    let cur = "";
+    parts.forEach(p => {
+      if ((cur + p).length > 180 && cur) { out.push(cur); cur = p; }
+      else cur += p;
+    });
+    if (cur.trim()) out.push(cur);
+    return out.map(s => s.trim()).filter(Boolean);
+  }
+
+  function pickVoice(code) {
+    const list = window.speechSynthesis.getVoices();
+    const want = (VLANG[code] || "en-IN").toLowerCase();
+    const base = want.split("-")[0];
+    const norm = v => v.lang.toLowerCase().replace("_", "-");
+    return list.find(v => norm(v) === want) || list.find(v => norm(v).startsWith(base));
+  }
+
+  function startClock() {
+    stopClock();
+    bTimer = setInterval(() => {
+      bElapsed++;
+      vnTime.textContent = fmt(bElapsed);
+    }, 1000);
+  }
+  function stopClock() {
+    if (bTimer) clearInterval(bTimer);
+    bTimer = null;
+  }
+
+  function finishBrowser() {
+    stopClock();
+    setPlaying(false);
+    bPaused = false;
+    setRatio(1);
+    setTimeout(() => { if (!playing) setRatio(0); }, 800);
+  }
+
+  function speakChunk(token) {
+    if (token !== bToken) return;
+    if (bIndex >= bChunks.length) { finishBrowser(); return; }
+    const piece = bChunks[bIndex];
+    const u = new SpeechSynthesisUtterance(piece);
+    u.lang = VLANG[LANG] || "en-IN";
+    const v = pickVoice(LANG);
+    if (v) u.voice = v;
+    u.rate = 0.95;
+    u.onboundary = e => { if (token === bToken) setRatio((bDone + e.charIndex) / bTotal); };
+    u.onend = () => {
+      if (token !== bToken) return;
+      bDone += piece.length;
+      bIndex++;
+      setRatio(bDone / bTotal);
+      speakChunk(token);
+    };
+    u.onerror = e => {
+      if (token !== bToken) return;
+      if (e.error === "canceled" || e.error === "interrupted") return;
+      stopAll();
+      vnTime.textContent = "Voice not available";
+    };
+    window.speechSynthesis.speak(u);
+  }
+
+  function startBrowser(text) {
+    mode = "browser";
+    if (!("speechSynthesis" in window)) {
+      setPlaying(false);
+      vnTime.textContent = "Voice not available";
+      return;
+    }
+    const voices = window.speechSynthesis.getVoices();
+    if (LANG !== "en" && voices.length && !pickVoice(LANG)) {
+      setPlaying(false);
+      vnTime.textContent = "Voice not available";
+      return;
+    }
+    window.speechSynthesis.cancel();
+    bToken++;
+    bChunks = splitChunks(text);
+    bTotal = bChunks.join("").length || 1;
+    bIndex = 0;
+    bDone = 0;
+    bElapsed = 0;
+    bPaused = false;
+    vnTime.textContent = "0:00";
+    setPlaying(true);
+    startClock();
+    const token = bToken;
+    setTimeout(() => speakChunk(token), 120);
+  }
+
+  function pauseBrowser() {
+    window.speechSynthesis.pause();
+    bPaused = true;
+    stopClock();
+    setPlaying(false);
+  }
+
+  function resumeBrowser() {
+    bPaused = false;
+    window.speechSynthesis.resume();
+    setPlaying(true);
+    startClock();
+  }
+
+  /* ---- shared ---- */
   function clean(t) {
     return (t || "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim();
   }
@@ -320,73 +441,99 @@
     return box && box.style.display !== "none" && !document.body.classList.contains("ai-failed");
   }
 
-  async function ensureAudio() {
+  function waitMsg() {
+    vnTime.textContent = "Please wait...";
+    setTimeout(() => {
+      vnTime.textContent = fmt(mode === "browser" ? bElapsed : voice.currentTime);
+    }, 1500);
+  }
+
+  function stopAll() {
+    bToken++;
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    stopClock();
+    bPaused = false;
+    bElapsed = 0;
+    bIndex = 0;
+    bDone = 0;
+    try { voice.pause(); voice.currentTime = 0; } catch (e) {}
+    setPlaying(false);
+    setRatio(0);
+    vnTime.textContent = "0:00";
+  }
+
+  async function begin() {
     const text = buildText();
-    if (voiceUrl && text === voiceKey) return true;
-    voiceBusy = true;
-    setIcon("fa-spinner fa-spin");
-    try {
-      const r = await fetch("/speak", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text: text, lang: LANG})
-      });
-      if (!r.ok) throw new Error("speak failed");
-      voice.pause();
-      voiceUrl = URL.createObjectURL(await r.blob());
-      voiceKey = text;
-      voice.src = voiceUrl;
-      voice.load();
-      return true;
-    } catch (e) {
-      console.log("Voice error:", e);
-      vnTime.textContent = "Voice error";
-      return false;
-    } finally {
+    if (mode === "file" && fileUrl && prepared === text) { voice.play(); return; }
+    if (mode === "browser" && prepared === text && bPaused) { resumeBrowser(); return; }
+
+    stopAll();
+    prepared = text;
+
+    let ok = false;
+    if (!serverFailed) {
+      voiceBusy = true;
+      setIcon("fa-spinner fa-spin");
+      vnTime.textContent = "...";
+      try {
+        const r = await fetch("/speak", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text: text, lang: LANG})
+        });
+        if (!r.ok) throw new Error("speak failed");
+        const blob = await r.blob();
+        if (!blob.size) throw new Error("empty audio");
+        fileUrl = URL.createObjectURL(blob);
+        voice.src = fileUrl;
+        voice.load();
+        mode = "file";
+        ok = true;
+      } catch (e) {
+        console.log("Server voice failed, using the built-in voice:", e);
+        serverFailed = true;
+      }
       voiceBusy = false;
-      setIcon(voice.paused ? "fa-play" : "fa-pause");
+    }
+
+    if (ok) {
+      voice.play().catch(() => {
+        setPlaying(false);
+        vnTime.textContent = "Tap play";
+      });
+    } else {
+      startBrowser(text);
     }
   }
 
   async function toggleVoice() {
     if (voiceBusy) return;
-    if (aiStillWorking()) {
-      vnTime.textContent = "Please wait...";
-      setTimeout(showTime, 1500);
+    if (aiStillWorking()) { waitMsg(); return; }
+    if (playing) {
+      if (mode === "file") voice.pause();
+      else if (mode === "browser") pauseBrowser();
       return;
     }
-    if (!voice.paused) {
-      voice.pause();
-      return;
-    }
-    if (await ensureAudio()) voice.play();
+    await begin();
   }
 
   async function speak() {
     if (voiceBusy) return;
-    if (aiStillWorking()) {
-      vnTime.textContent = "Please wait...";
-      setTimeout(showTime, 1500);
-      return;
-    }
-    voice.pause();
-    if (await ensureAudio()) {
-      voice.currentTime = 0;
-      voice.play();
-    }
+    if (aiStillWorking()) { waitMsg(); return; }
+    if (mode === "file") voice.currentTime = 0;
+    if (mode === "browser") bPaused = false;
+    await begin();
   }
 
   function stopSpeak() {
-    voice.pause();
-    voice.currentTime = 0;
-    showProgress();
+    stopAll();
   }
 
   function resetVoice() {
-    stopSpeak();
-    voiceUrl = null;
-    voiceKey = "";
-    vnTime.textContent = "0:00";
+    stopAll();
+    fileUrl = null;
+    mode = "";
+    prepared = "";
   }
 
   const circ = 326.73;
