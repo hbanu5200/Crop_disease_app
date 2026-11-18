@@ -192,7 +192,7 @@ def init_db():
             disease TEXT,
             confidence REAL,
             healthy INTEGER)""")
-        for col in ("label TEXT", "others TEXT"):
+        for col in ("label TEXT", "others TEXT", "photo BLOB"):
             try:
                 con.execute("ALTER TABLE scans ADD COLUMN " + col)
             except sqlite3.OperationalError:
@@ -218,6 +218,28 @@ def predict(path):
     probs = interpreter.get_tensor(out["index"])[0]
     top3 = np.argsort(probs)[::-1][:3]
     return [(class_names[i], float(probs[i]) * 100) for i in top3]
+
+
+def make_photo_copy(path):
+    """Small JPEG copy of the photo, kept inside the database."""
+    img = Image.open(path).convert("RGB")
+    img.thumbnail((800, 800))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=80)
+    return buf.getvalue()
+
+
+def restore_image(filename, photo):
+    """If the photo file is gone (Render wipes files), rebuild it from the database copy."""
+    if not filename or not photo:
+        return
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        try:
+            with open(path, "wb") as f:
+                f.write(photo)
+        except OSError:
+            pass
 
 
 def clean(name):
@@ -303,13 +325,14 @@ def upload():
     crop, disease = clean(label)
     healthy = "healthy" in label.lower()
     others = json.dumps([[n, round(c, 1)] for n, c in results[1:]])
+    photo = make_photo_copy(path)
 
     with sqlite3.connect(DB) as con:
         cur = con.execute(
-            "INSERT INTO scans (created, image, crop, disease, confidence, healthy, label, others) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO scans (created, image, crop, disease, confidence, healthy, label, others, photo) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (datetime.now().strftime("%d %b %Y, %I:%M %p"), filename, crop,
-             disease, round(confidence, 1), int(healthy), label, others),
+             disease, round(confidence, 1), int(healthy), label, others, photo),
         )
         scan_id = cur.lastrowid
 
@@ -323,6 +346,8 @@ def result(scan_id):
         row = con.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
     if row is None:
         return redirect(url_for("history"))
+
+    restore_image(row["image"], row["photo"])
 
     lang = get_lang()
     label = row["label"] or ""
@@ -379,12 +404,14 @@ def history():
         ).fetchall()
     items = []
     for r in rows:
+        restore_image(r["image"], r["photo"])
         if r["label"]:
             crop, disease = clean(r["label"])
         else:
             crop, disease = r["crop"], r["disease"]
         has_image = bool(r["image"]) and os.path.exists(
             os.path.join(UPLOAD_FOLDER, r["image"]))
+        is_healthy = bool(r["healthy"]) or "healthy" in (disease or "").lower()
         items.append({
             "id": r["id"],
             "image": r["image"],
@@ -393,7 +420,7 @@ def history():
             "disease": tr(disease),
             "confidence": r["confidence"],
             "created": r["created"],
-            "healthy": bool(r["healthy"]),
+            "healthy": is_healthy,
         })
     return render_template("history.html", items=items)
 
