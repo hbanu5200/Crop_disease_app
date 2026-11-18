@@ -363,6 +363,15 @@ def result(scan_id):
 @app.route("/history")
 def history():
     lang = get_lang()
+    table = saved.get(lang, {})
+    lower = {k.lower(): v for k, v in table.items()}
+
+    def tr(text):
+        text = (text or "").strip()
+        if lang == "en" or not text:
+            return text
+        return table.get(text) or lower.get(text.lower()) or text
+
     with sqlite3.connect(DB) as con:
         con.row_factory = sqlite3.Row
         rows = con.execute(
@@ -370,18 +379,30 @@ def history():
         ).fetchall()
     items = []
     for r in rows:
-        crop_t, disease_t = translate_many(
-            [(r["crop"] or "").strip(), (r["disease"] or "").strip()], lang)
+        if r["label"]:
+            crop, disease = clean(r["label"])
+        else:
+            crop, disease = r["crop"], r["disease"]
+        has_image = bool(r["image"]) and os.path.exists(
+            os.path.join(UPLOAD_FOLDER, r["image"]))
         items.append({
             "id": r["id"],
             "image": r["image"],
-            "crop": crop_t,
-            "disease": disease_t,
+            "has_image": has_image,
+            "crop": tr(crop),
+            "disease": tr(disease),
             "confidence": r["confidence"],
             "created": r["created"],
             "healthy": bool(r["healthy"]),
         })
     return render_template("history.html", items=items)
+
+
+@app.route("/history/delete/<int:scan_id>", methods=["POST"])
+def delete_scan(scan_id):
+    with sqlite3.connect(DB) as con:
+        con.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
+    return redirect(url_for("history"))
 
 
 @app.route("/history/clear", methods=["POST"])
@@ -447,16 +468,20 @@ def speak():
     buf.seek(0)
     return send_file(buf, mimetype="audio/mpeg")
 
+
 @app.route("/service-worker.js")
 def service_worker():
     from flask import send_from_directory
     return send_from_directory(
         "static", "service-worker.js", mimetype="application/javascript"
     )
+
+
 try:
     from lens import lens_bp
     app.register_blueprint(lens_bp)
 except Exception as e:
     print("Leaf Lens not loaded:", e)
+
 if __name__ == "__main__":
     app.run(debug=True)

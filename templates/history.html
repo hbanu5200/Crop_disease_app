@@ -13,6 +13,10 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: 0.2s;
   }
   .hdel button:hover { background: #c62828; color: white; transform: none; }
+  .noimg {
+    display: grid; place-items: center; min-height: 100px; min-width: 100px;
+    background: #e8f5e9; color: #66bb6a; font-size: 32px;
+  }
 </style>
 
 <main class="wrap">
@@ -30,7 +34,11 @@
     {% for it in items %}
     <div class="hwrap">
       <a class="hcard" href="{{ url_for('result', scan_id=it.id) }}">
-        <img src="{{ url_for('static', filename='uploads/' + it.image) }}" alt="">
+        {% if it.has_image %}
+        <img src="{{ url_for('static', filename='uploads/' + it.image) }}" alt="" onerror="this.replaceWith(makePh())">
+        {% else %}
+        <div class="noimg"><i class="fa-solid fa-leaf"></i></div>
+        {% endif %}
         <div class="hinfo">
           <small class="hcrop"><i class="fa-solid fa-seedling"></i> {{ it.crop or '-' }}</small>
           <b class="hdis">{{ it.disease }}</b>
@@ -58,6 +66,12 @@
 
 {% block scripts %}
 <script>
+  function makePh() {
+    const d = document.createElement("div");
+    d.className = "noimg";
+    d.innerHTML = '<i class="fa-solid fa-leaf"></i>';
+    return d;
+  }
   function askDelete() {
     const words = {
       en: "Delete this scan?",

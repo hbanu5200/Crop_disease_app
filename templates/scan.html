@@ -164,7 +164,10 @@
       return;
     }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+  video: { facingMode: { ideal: "environment" } },
+  audio: false
+});
       video.srcObject = stream;
       await video.play();
       camBox.style.display = "block";
